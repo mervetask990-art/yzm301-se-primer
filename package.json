@@ -1,0 +1,12 @@
+{
+  "name": "se-primer",
+  "private": true,
+  "scripts": {
+    "cy:open": "cypress open --e2e",
+    "cy:run": "cypress run --e2e"
+  },
+  "devDependencies": {
+    "cypress": "^16.2.0",
+    "typescript": "^7.0.2"
+  }
+}

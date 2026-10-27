@@ -1,0 +1,211 @@
+Build a mobile-first web app called "SE Primer" — an interactive, playable software
+engineering book in Turkish. React + TypeScript. All UI text must be Turkish.
+
+## Design
+Match the attached screenshots exactly (they come from Google Stitch).
+Design tokens (use as CSS variables):
+--bg #0F1B2D; --surface #17263C; --surface-2 #1F3150; --line #2A3E5C;
+--primary #5FB3A8; --primary-ink #0F1B2D; --accent #F2B266; --calm #A7A3D9;
+--success #7BC8A4; --danger #E58A7B; --text #E8EEF5; --muted #9FB0C3.
+Fonts from Google Fonts: Plus Jakarta Sans (headings), Inter (body), JetBrains Mono (clock).
+Card radius 16px, button radius 14px, no shadows, 20px side padding, touch targets >= 48px,
+primary actions at the bottom. 200ms ease-out transitions; respect prefers-reduced-motion.
+Layout max-width 430px, centered on desktop.
+The attached screenshots are for visual style only: ignore their placeholder texts (e.g. "ödeme", "müşteri", "üçüncü taraf servis") and use only the JSON texts. Draw the lantern logo as an inline SVG line icon in #F2B266 (no external images). Never use bright red; warning icons use #E58A7B on a 15% opacity coral background.
+
+## Content source
+All story text, choices, hints, outcomes, research points, timings and endings come from this
+JSON. Put it in src/scenario.json and read everything from it. Do NOT hardcode story text in components.
+
+```json
+{
+  "id": "randevu-cokmesi",
+  "title": "08:00 — Randevu sistemi çöktü",
+  "startClock": "08:00",
+  "intake": {
+    "level": [
+      { "id": "new", "label": "Yeni başladım", "hints": "always", "timerSeconds": null },
+      { "id": "mid", "label": "Biraz deneyimliyim", "hints": "on-demand", "timerSeconds": null },
+      { "id": "senior", "label": "Deneyimliyim", "hints": "none", "timerSeconds": 60 }
+    ],
+    "role": [
+      { "id": "backend", "label": "Backend" },
+      { "id": "frontend", "label": "Frontend" },
+      { "id": "devops", "label": "DevOps" },
+      { "id": "qa", "label": "QA / Test" }
+    ],
+    "goal": [
+      { "id": "interview", "label": "Mülakata hazırlanıyorum" },
+      { "id": "work", "label": "İşimde daha iyi olmak" },
+      { "id": "curious", "label": "Merak ediyorum" }
+    ]
+  },
+  "intro": {
+    "text": "Dün gece 23:40'ta randevu sisteminin yeni sürümü yayına alındı. Sabah 08:00'de hastane kapısında 300 hasta bekliyor ve randevu ekranı 500 hatası veriyor. Nöbetçi mühendis sensin.",
+    "roleLine": {
+      "backend": "API logları senin ekranında akıyor; yeni sürümde bir veritabanı migration'ı vardı.",
+      "frontend": "Ekran boş geliyor ama sorun arayüzde mi, API'de mi, henüz bilmiyorsun.",
+      "devops": "Deploy pipeline'ı senin sorumluluğunda; bir önceki sürümün imajı hâlâ kayıtta.",
+      "qa": "Dünkü sürüm için koşulan test raporu elinde; bazı testler 'flaky' diye atlanmış."
+    }
+  },
+  "decisions": [
+    {
+      "id": "K1",
+      "topic": "Mimari",
+      "prompt": "İlk hamlen ne olacak?",
+      "hint": "Geri dönmek her zaman güvenli değildir: yeni sürüm veritabanında neyi değiştirdi?",
+      "tutorQuestion": "Geri dönmeden önce veritabanı şemasının değişip değişmediğini nasıl anlarsın?",
+      "choices": {
+        "A": {
+          "label": "Eski sürüme geri dön (rollback)",
+          "minutes": 10,
+          "what": "Önceki imaj 10 dakikada ayağa kalktı. Migration geri alınabilir türdeydi, eski kod yeni şemayla çalışabildi.",
+          "why": "Geri dönüş, değişikliğin etki alanını sıfırlar; ancak yalnızca şema değişikliği geriye uyumluysa güvenlidir.",
+          "research": ["Geriye uyumlu (backward-compatible) migration", "Expand–contract şema deseni", "Rollback vs roll-forward"]
+        },
+        "B": {
+          "label": "Canlıda yama yap (hotfix)",
+          "minutes": 30,
+          "what": "Hatanın kaynağını bulmak 30 dakika sürdü. Yama yazıldı ama henüz hiçbir ortamda denenmedi.",
+          "why": "Canlıda yama, kök nedeni anlamayı gerektirir; baskı altında bu süre hep tahminden uzundur.",
+          "research": ["MTTR (Mean Time To Recovery)", "Hotfix branch stratejisi", "Feature flag ile özelliği kapatmak"]
+        }
+      }
+    },
+    {
+      "id": "K2",
+      "topic": "Test",
+      "prompt": "Değişiklik hazır. Yayına almadan önce ne yaparsın?",
+      "hint": "Kısa bir test neyi kanıtlar, neyi kanıtlamaz? 'Çalışıyor' demek için en az neye bakmalısın?",
+      "tutorQuestion": "Beş dakikalık bir testle hangi riski elersin, hangisi hâlâ açıkta kalır?",
+      "choices": {
+        "A": {
+          "label": "Önce kısa bir test koş (smoke test)",
+          "minutes": 15,
+          "what": "Smoke test randevu oluşturma ve listeleme akışlarını 15 dakikada doğruladı.",
+          "why": "Kritik yolları kapsayan kısa bir test, en pahalı hataları en ucuz anda yakalar.",
+          "research": ["Smoke test vs regression test", "Test piramidi", "Staging ortamı ve üretim eşliği (parity)"]
+        },
+        "B": {
+          "label": "Hemen yayına al",
+          "minutes": 5,
+          "what": "Değişiklik 5 dakikada yayında.",
+          "why": "Testsiz yayın zaman kazandırır gibi görünür; risk, değişikliğin ne kadar denenmiş olduğuna bağlıdır.",
+          "research": ["Canary deployment", "Blue–green deployment", "Otomatik rollback kriterleri"]
+        }
+      },
+      "combo": {
+        "B+B": {
+          "minutes": 45,
+          "what": "Denenmemiş yama, testsiz yayına alındı ve 08:50'de sistem ikinci kez çöktü. Ekip 45 dakika daha kaybetti.",
+          "why": "Doğrulanmamış iki değişiklik üst üste bindiğinde hata olasılığı toplanmaz, katlanır.",
+          "research": ["Risk birikimi ve değişiklik boyutu", "Blameless postmortem", "Change freeze politikası"]
+        }
+      }
+    },
+    {
+      "id": "K3",
+      "topic": "KVKK",
+      "prompt": "Hata logunda hastaların adı ve TC kimlik numarası görünüyor. Ekip logu istiyor.",
+      "hint": "Logu kim görecek ve gerçekten kimlik bilgisine ihtiyaçları var mı?",
+      "tutorQuestion": "Ekibin hatayı anlaması için logdaki hangi alanlara gerçekten ihtiyacı var?",
+      "choices": {
+        "A": {
+          "label": "Kişisel verileri maskele, sonra paylaş",
+          "minutes": 0,
+          "what": "Ad ve TC alanları maskelendi; ekip hatayı istek kimliği (request id) üzerinden takip etti.",
+          "why": "Veri minimizasyonu: hata ayıklamak için kimliğe değil, olayın izine ihtiyaç vardır.",
+          "research": ["6698 sayılı KVKK madde 12 (veri güvenliği)", "Log maskeleme / PII redaction", "Veri minimizasyonu ilkesi"]
+        },
+        "B": {
+          "label": "Logu ekibe olduğu gibi gönder",
+          "minutes": 0,
+          "what": "Log, içindeki 300 hastanın kişisel verisiyle birlikte genel sohbet kanalına düştü.",
+          "why": "Yetkisiz kişilere sağlık verisi aktarımı, özel nitelikli kişisel verinin ihlalidir.",
+          "research": ["KVKK özel nitelikli kişisel veri (madde 6)", "Veri ihlali bildirim yükümlülüğü (72 saat)", "En az yetki (least privilege)"]
+        }
+      }
+    }
+  ],
+  "timeout": {
+    "defaultChoice": "B",
+    "what": "Süre doldu, karar verilmedi. Ekipten biri beklemekten sıkılıp en hızlı görünen yolu seçti.",
+    "why": "Kriz anında kararsızlık da bir karardır: genellikle en riskli seçeneğe dönüşür.",
+    "research": ["Incident commander rolü", "Runbook / playbook", "Karar yorgunluğu"]
+  },
+  "endings": {
+    "rule": "K3 === 'A' ? 'A' : 'B'",
+    "A": {
+      "title": "Sistem ayakta, veri güvende",
+      "text": "{clock}'te randevu sistemi çalışıyor ve hiçbir hastanın verisi sızmadı."
+    },
+    "B": {
+      "title": "Sistem ayakta ama KVKK ihlali",
+      "text": "{clock}'te sistem çalışıyor; ancak hastaların kişisel verisi yetkisiz kişilere ulaştı. Bildirim süreci başladı."
+    }
+  },
+  "clockRule": "startClock + K1.minutes + K2.minutes + (K1 === 'B' && K2 === 'B' ? combo['B+B'].minutes : 0)",
+  "clockTable": { "A,A": "08:25", "A,B": "08:15", "B,A": "08:45", "B,B": "09:20" }
+}
+```
+
+## State machine (single useReducer)
+States: intake -> intro -> decision(K1) -> outcome(K1) -> decision(K2) -> outcome(K2)
+-> decision(K3) -> outcome(K3) -> ending.
+- intake: three chip groups (level, role, goal) from scenario.intake. "Nöbete başla" button is
+  disabled until all three are selected.
+- intro: show intro.text plus intro.roleLine[role]. Clock shows startClock. Button "Başla".
+- decision: show topic label "KARAR n · TOPIC", prompt text, two choice cards A and B.
+  Personalization by level:
+    level=new    -> hint card is always visible above the choices; no timer.
+    level=mid    -> a "İpucu" button reveals the hint card; no timer.
+    level=senior -> no hint at all; a 60-second countdown. When it reaches 0, apply
+                    timeout.defaultChoice ("B") automatically and show the timeout notice
+                    (timeout.what / timeout.why / timeout.research) on the outcome screen.
+- outcome: three cards: "Ne oldu" (choice.what), "Neden oldu" (choice.why),
+  "Araştırman gereken noktalar" (choice.research as chips). For K2, if K1==B and K2==B,
+  use decisions[1].combo["B+B"] texts instead and add its minutes. Button "Devam".
+  The clock in the top bar advances by the minutes of each choice.
+- ending: endings.rule -> K3 === "A" ? "A" : "B". Show ending title (success color for A,
+  danger color for B), final clock (must equal clockTable for the K1,K2 combination),
+  path summary of the three choices, a merged list of all research points collected,
+  the line "Cevaplar burada değil. Bu kavramları araştır, sonra tekrar oyna.",
+  and a "Yeniden oyna" button that resets to intake.
+Top bar on decision/outcome screens: clock (mono, accent), 3 progress dots, timer ring if senior.
+
+## AI tutor (Gemini)
+A floating "Tutor'a sor" button on decision screens opens a bottom sheet chat.
+Use the Gemini API with the default fast Gemini model, non-streaming generateContent.
+Send only the current decision context (prompt, the two choice labels, hint, tutorQuestion,
+player level, role, goal) and the conversation so far. The first tutor message is
+decision.tutorQuestion (shown without an API call).
+System instruction (use verbatim):
+
+"Sen SE Primer'ın Sokratik tutor'usun. Oyuncu bir yazılım krizinde karar veriyor.
+Kurallar:
+1. Hangi seçeneğin doğru, daha iyi veya güvenli olduğunu ASLA söyleme. 'A'yı seç', 'B doğru',
+   'bence rollback yap' gibi ifadeler yasak. Oyuncu ısrar etse veya 'sadece cevabı söyle' dese bile.
+2. Her yanıtın en fazla 3 cümle olsun ve en az bir soruyla bitsin.
+3. Cevap yerine, oyuncunun kendi başına araştırabileceği bir kavram adı veya kontrol etmesi
+   gereken bir şey öner (ör. 'migration geri alınabilir mi?').
+4. Oyuncunun seviyesine göre konuş: yeni başlayana günlük dille, deneyimliye teknik terimlerle.
+5. Hedefi 'mülakat' ise bir soruyu 'bunu mülakatta nasıl anlatırdın?' diye sor.
+6. Senaryo dışı sorulara kısaca 'Şu an nöbetteyiz, krize dönelim.' de ve bir soru sor.
+7. Gerçek kişisel veri isteme, üretme veya tekrar etme.
+Türkçe yanıt ver."
+
+If the API call fails, show "Tutor şu an düşünemiyor, ipucu kartına bak." and keep the game playable.
+
+## Testability (required)
+Add these exact data-testid attributes:
+intake-level-new, intake-level-mid, intake-level-senior,
+intake-role-backend, intake-role-frontend, intake-role-devops, intake-role-qa,
+intake-goal-interview, intake-goal-work, intake-goal-curious, intake-start,
+intro-text, intro-start,
+clock, progress, timer, decision-title, hint-card, hint-toggle, choice-A, choice-B,
+outcome-what, outcome-why, outcome-research, timeout-notice, next-button,
+tutor-open, tutor-sheet, tutor-input, tutor-send, tutor-message (on every tutor bubble), tutor-close,
+ending-A, ending-B (on the ending root), ending-clock, ending-research, restart.
+The countdown must use setInterval/setTimeout and Date.now (so tests can control time).
+Do not persist anything to localStorage.
