@@ -4,20 +4,56 @@
   "startClock": "08:00",
   "intake": {
     "level": [
-      { "id": "new", "label": "Yeni başladım", "hints": "always", "timerSeconds": null },
-      { "id": "mid", "label": "Biraz deneyimliyim", "hints": "on-demand", "timerSeconds": null },
-      { "id": "senior", "label": "Deneyimliyim", "hints": "none", "timerSeconds": 60 }
+      {
+        "id": "new",
+        "label": "Yeni başladım",
+        "hints": "always",
+        "timerSeconds": null
+      },
+      {
+        "id": "mid",
+        "label": "Biraz deneyimliyim",
+        "hints": "on-demand",
+        "timerSeconds": null
+      },
+      {
+        "id": "senior",
+        "label": "Deneyimliyim",
+        "hints": "none",
+        "timerSeconds": 60
+      }
     ],
     "role": [
-      { "id": "backend", "label": "Backend" },
-      { "id": "frontend", "label": "Frontend" },
-      { "id": "devops", "label": "DevOps" },
-      { "id": "qa", "label": "QA / Test" }
+      {
+        "id": "backend",
+        "label": "Backend"
+      },
+      {
+        "id": "frontend",
+        "label": "Frontend"
+      },
+      {
+        "id": "devops",
+        "label": "DevOps"
+      },
+      {
+        "id": "qa",
+        "label": "QA / Test"
+      }
     ],
     "goal": [
-      { "id": "interview", "label": "Mülakata hazırlanıyorum" },
-      { "id": "work", "label": "İşimde daha iyi olmak" },
-      { "id": "curious", "label": "Merak ediyorum" }
+      {
+        "id": "interview",
+        "label": "Mülakata hazırlanıyorum"
+      },
+      {
+        "id": "work",
+        "label": "İşimde daha iyi olmak"
+      },
+      {
+        "id": "curious",
+        "label": "Merak ediyorum"
+      }
     ]
   },
   "intro": {
@@ -33,6 +69,7 @@
     {
       "id": "K1",
       "topic": "Mimari",
+      "skillTopic": "deploy",
       "prompt": "İlk hamlen ne olacak?",
       "hint": "Geri dönmek her zaman güvenli değildir: yeni sürüm veritabanında neyi değiştirdi?",
       "tutorQuestion": "Geri dönmeden önce veritabanı şemasının değişip değişmediğini nasıl anlarsın?",
@@ -64,6 +101,7 @@
     {
       "id": "K2",
       "topic": "Test",
+      "skillTopic": "test",
       "prompt": "Değişiklik hazır. Yayına almadan önce ne yaparsın?",
       "hint": "Kısa bir test neyi kanıtlar, neyi kanıtlamaz? 'Çalışıyor' demek için en az neye bakmalısın?",
       "tutorQuestion": "Beş dakikalık bir testle hangi riski elersin, hangisi hâlâ açıkta kalır?",
@@ -107,6 +145,7 @@
     {
       "id": "K3",
       "topic": "KVKK",
+      "skillTopic": "security",
       "prompt": "Hata logunda hastaların adı ve TC kimlik numarası görünüyor. Ekip logu istiyor.",
       "hint": "Logu kim görecek ve gerçekten kimlik bilgisine ihtiyaçları var mı?",
       "tutorQuestion": "Ekibin hatayı anlaması için logdaki hangi alanlara gerçekten ihtiyacı var?",
@@ -137,6 +176,7 @@
     }
   ],
   "timeout": {
+    "skillTopic": "team",
     "defaultChoice": "B",
     "what": "Süre doldu, karar verilmedi. Ekipten biri beklemekten sıkılıp en hızlı görünen yolu seçti.",
     "why": "Kriz anında kararsızlık da bir karardır: genellikle en riskli seçeneğe dönüşür.",

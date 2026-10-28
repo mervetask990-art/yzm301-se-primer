@@ -4,20 +4,56 @@
   "startClock": "08:00",
   "intake": {
     "level": [
-      { "id": "new", "label": "Yeni başladım", "hints": "always", "timerSeconds": null },
-      { "id": "mid", "label": "Biraz deneyimliyim", "hints": "on-demand", "timerSeconds": null },
-      { "id": "senior", "label": "Deneyimliyim", "hints": "none", "timerSeconds": 60 }
+      {
+        "id": "new",
+        "label": "Yeni başladım",
+        "hints": "always",
+        "timerSeconds": null
+      },
+      {
+        "id": "mid",
+        "label": "Biraz deneyimliyim",
+        "hints": "on-demand",
+        "timerSeconds": null
+      },
+      {
+        "id": "senior",
+        "label": "Deneyimliyim",
+        "hints": "none",
+        "timerSeconds": 60
+      }
     ],
     "role": [
-      { "id": "backend", "label": "Backend" },
-      { "id": "frontend", "label": "Frontend" },
-      { "id": "devops", "label": "DevOps" },
-      { "id": "qa", "label": "QA / Test" }
+      {
+        "id": "backend",
+        "label": "Backend"
+      },
+      {
+        "id": "frontend",
+        "label": "Frontend"
+      },
+      {
+        "id": "devops",
+        "label": "DevOps"
+      },
+      {
+        "id": "qa",
+        "label": "QA / Test"
+      }
     ],
     "goal": [
-      { "id": "interview", "label": "Mülakata hazırlanıyorum" },
-      { "id": "work", "label": "İşimde daha iyi olmak" },
-      { "id": "curious", "label": "Merak ediyorum" }
+      {
+        "id": "interview",
+        "label": "Mülakata hazırlanıyorum"
+      },
+      {
+        "id": "work",
+        "label": "İşimde daha iyi olmak"
+      },
+      {
+        "id": "curious",
+        "label": "Merak ediyorum"
+      }
     ]
   },
   "intro": {
@@ -33,6 +69,7 @@
     {
       "id": "K1",
       "topic": "Mimari",
+      "skillTopic": "deploy",
       "prompt": "İlk hamlen ne olacak?",
       "hint": "Geri dönmek her zaman güvenli değildir: yeni sürüm veritabanında neyi değiştirdi?",
       "tutorQuestion": "Geri dönmeden önce veritabanı şemasının değişip değişmediğini nasıl anlarsın?",
@@ -42,20 +79,29 @@
           "minutes": 10,
           "what": "Önceki imaj 10 dakikada ayağa kalktı. Migration geri alınabilir türdeydi, eski kod yeni şemayla çalışabildi.",
           "why": "Geri dönüş, değişikliğin etki alanını sıfırlar; ancak yalnızca şema değişikliği geriye uyumluysa güvenlidir.",
-          "research": ["Geriye uyumlu (backward-compatible) migration", "Expand–contract şema deseni", "Rollback vs roll-forward"]
+          "research": [
+            "Geriye uyumlu (backward-compatible) migration",
+            "Expand–contract şema deseni",
+            "Rollback vs roll-forward"
+          ]
         },
         "B": {
           "label": "Canlıda yama yap (hotfix)",
           "minutes": 30,
           "what": "Hatanın kaynağını bulmak 30 dakika sürdü. Yama yazıldı ama henüz hiçbir ortamda denenmedi.",
           "why": "Canlıda yama, kök nedeni anlamayı gerektirir; baskı altında bu süre hep tahminden uzundur.",
-          "research": ["MTTR (Mean Time To Recovery)", "Hotfix branch stratejisi", "Feature flag ile özelliği kapatmak"]
+          "research": [
+            "MTTR (Mean Time To Recovery)",
+            "Hotfix branch stratejisi",
+            "Feature flag ile özelliği kapatmak"
+          ]
         }
       }
     },
     {
       "id": "K2",
       "topic": "Test",
+      "skillTopic": "test",
       "prompt": "Değişiklik hazır. Yayına almadan önce ne yaparsın?",
       "hint": "Kısa bir test neyi kanıtlar, neyi kanıtlamaz? 'Çalışıyor' demek için en az neye bakmalısın?",
       "tutorQuestion": "Beş dakikalık bir testle hangi riski elersin, hangisi hâlâ açıkta kalır?",
@@ -65,14 +111,22 @@
           "minutes": 15,
           "what": "Smoke test randevu oluşturma ve listeleme akışlarını 15 dakikada doğruladı.",
           "why": "Kritik yolları kapsayan kısa bir test, en pahalı hataları en ucuz anda yakalar.",
-          "research": ["Smoke test vs regression test", "Test piramidi", "Staging ortamı ve üretim eşliği (parity)"]
+          "research": [
+            "Smoke test vs regression test",
+            "Test piramidi",
+            "Staging ortamı ve üretim eşliği (parity)"
+          ]
         },
         "B": {
           "label": "Hemen yayına al",
           "minutes": 5,
           "what": "Değişiklik 5 dakikada yayında.",
           "why": "Testsiz yayın zaman kazandırır gibi görünür; risk, değişikliğin ne kadar denenmiş olduğuna bağlıdır.",
-          "research": ["Canary deployment", "Blue–green deployment", "Otomatik rollback kriterleri"]
+          "research": [
+            "Canary deployment",
+            "Blue–green deployment",
+            "Otomatik rollback kriterleri"
+          ]
         }
       },
       "combo": {
@@ -80,13 +134,18 @@
           "minutes": 45,
           "what": "Denenmemiş yama, testsiz yayına alındı ve 08:50'de sistem ikinci kez çöktü. Ekip 45 dakika daha kaybetti.",
           "why": "Doğrulanmamış iki değişiklik üst üste bindiğinde hata olasılığı toplanmaz, katlanır.",
-          "research": ["Risk birikimi ve değişiklik boyutu", "Blameless postmortem", "Change freeze politikası"]
+          "research": [
+            "Risk birikimi ve değişiklik boyutu",
+            "Blameless postmortem",
+            "Change freeze politikası"
+          ]
         }
       }
     },
     {
       "id": "K3",
       "topic": "KVKK",
+      "skillTopic": "security",
       "prompt": "Hata logunda hastaların adı ve TC kimlik numarası görünüyor. Ekip logu istiyor.",
       "hint": "Logu kim görecek ve gerçekten kimlik bilgisine ihtiyaçları var mı?",
       "tutorQuestion": "Ekibin hatayı anlaması için logdaki hangi alanlara gerçekten ihtiyacı var?",
@@ -96,23 +155,36 @@
           "minutes": 0,
           "what": "Ad ve TC alanları maskelendi; ekip hatayı istek kimliği (request id) üzerinden takip etti.",
           "why": "Veri minimizasyonu: hata ayıklamak için kimliğe değil, olayın izine ihtiyaç vardır.",
-          "research": ["6698 sayılı KVKK madde 12 (veri güvenliği)", "Log maskeleme / PII redaction", "Veri minimizasyonu ilkesi"]
+          "research": [
+            "6698 sayılı KVKK madde 12 (veri güvenliği)",
+            "Log maskeleme / PII redaction",
+            "Veri minimizasyonu ilkesi"
+          ]
         },
         "B": {
           "label": "Logu ekibe olduğu gibi gönder",
           "minutes": 0,
           "what": "Log, içindeki 300 hastanın kişisel verisiyle birlikte genel sohbet kanalına düştü.",
           "why": "Yetkisiz kişilere sağlık verisi aktarımı, özel nitelikli kişisel verinin ihlalidir.",
-          "research": ["KVKK özel nitelikli kişisel veri (madde 6)", "Veri ihlali bildirim yükümlülüğü (72 saat)", "En az yetki (least privilege)"]
+          "research": [
+            "KVKK özel nitelikli kişisel veri (madde 6)",
+            "Veri ihlali bildirim yükümlülüğü (72 saat)",
+            "En az yetki (least privilege)"
+          ]
         }
       }
     }
   ],
   "timeout": {
+    "skillTopic": "team",
     "defaultChoice": "B",
     "what": "Süre doldu, karar verilmedi. Ekipten biri beklemekten sıkılıp en hızlı görünen yolu seçti.",
     "why": "Kriz anında kararsızlık da bir karardır: genellikle en riskli seçeneğe dönüşür.",
-    "research": ["Incident commander rolü", "Runbook / playbook", "Karar yorgunluğu"]
+    "research": [
+      "Incident commander rolü",
+      "Runbook / playbook",
+      "Karar yorgunluğu"
+    ]
   },
   "endings": {
     "rule": "K3 === 'A' ? 'A' : 'B'",
@@ -126,5 +198,10 @@
     }
   },
   "clockRule": "startClock + K1.minutes + K2.minutes + (K1 === 'B' && K2 === 'B' ? combo['B+B'].minutes : 0)",
-  "clockTable": { "A,A": "08:25", "A,B": "08:15", "B,A": "08:45", "B,B": "09:20" }
+  "clockTable": {
+    "A,A": "08:25",
+    "A,B": "08:15",
+    "B,A": "08:45",
+    "B,B": "09:20"
+  }
 }

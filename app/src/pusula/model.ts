@@ -1,9 +1,11 @@
 // Pusula: the player's own question becomes a map of paths. Shared by server.ts and the UI.
 // A path never says "do this"; it explains the logic and where it leads.
+import { Alignment, TOPIC_IDS, TopicId, isTopic, overlapScore } from '../skills';
 
 export interface PusulaPath {
   id: string;
   title: string; // short name of the approach, e.g. "Önce etkiyi durdur"
+  topic?: TopicId; // skill-map topic this path mostly exercises
   logic: string; // which principle / trade-off makes someone choose this
   leadsTo: string; // where this path most likely ends up
   risk: string; // what can go wrong on this path
@@ -52,23 +54,42 @@ export type PusulaRequest =
       customPath: string;
       profile: PusulaProfile;
       learner?: unknown;
+    }
+  | {
+      mode: 'compare';
+      question: string;
+      path: PusulaPath;
+      prediction: string;
+      profile: PusulaProfile;
     };
+
+export interface CompareResponse {
+  alignment: Alignment; // close | partial | missed — never "right/wrong"
+  matched: string; // what the prediction already saw
+  missedQuestion: string; // Socratic question pointing at what it missed
+  offline?: boolean;
+  busy?: boolean; // every model was overloaded; the generic map was served instead
+  guarded?: boolean;
+}
 
 export interface ClarifyResponse {
   questions: string[];
   offline?: boolean;
+  busy?: boolean; // every model was overloaded; the generic map was served instead
 }
 
 export interface MapResponse {
   situation: string;
   paths: PusulaPath[];
   offline?: boolean;
+  busy?: boolean; // every model was overloaded; the generic map was served instead
   guarded?: boolean;
 }
 
 export interface EvaluateResponse {
   path: PusulaPath;
   offline?: boolean;
+  busy?: boolean; // every model was overloaded; the generic map was served instead
   guarded?: boolean;
 }
 
@@ -80,6 +101,7 @@ const pathSchema = {
   type: 'object',
   properties: {
     title: { type: 'string' },
+    topic: { type: 'string', enum: TOPIC_IDS },
     logic: { type: 'string' },
     leadsTo: { type: 'string' },
     risk: { type: 'string' },
@@ -87,7 +109,17 @@ const pathSchema = {
     research: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 3 },
     selfQuestion: { type: 'string' },
   },
-  required: ['title', 'logic', 'leadsTo', 'risk', 'whenItFits', 'research', 'selfQuestion'],
+  required: ['title', 'topic', 'logic', 'leadsTo', 'risk', 'whenItFits', 'research', 'selfQuestion'],
+};
+
+export const compareSchema = {
+  type: 'object',
+  properties: {
+    alignment: { type: 'string', enum: ['close', 'partial', 'missed'] },
+    matched: { type: 'string' },
+    missedQuestion: { type: 'string' },
+  },
+  required: ['alignment', 'matched', 'missedQuestion'],
 };
 
 export const clarifySchema = {
@@ -148,6 +180,7 @@ export function normalizePath(raw: any, id: string): { path: PusulaPath; guarded
   const path: PusulaPath = {
     id,
     title: clean(raw?.title) || 'Yol',
+    topic: isTopic(raw?.topic) ? raw.topic : undefined,
     logic: clean(raw?.logic),
     leadsTo: clean(raw?.leadsTo),
     risk: clean(raw?.risk),
@@ -182,6 +215,7 @@ export function offlineMap(depth: number): MapResponse {
       paths: [
         {
           id: `${prefix}-a`,
+          topic: 'deploy',
           title: 'Önce etkiyi durdur',
           logic: 'Kullanıcıya verilen zararı en kısa sürede kesmek, nedeni anlamaktan önce gelir (MTTR odaklı düşünce).',
           leadsTo: 'Sistem hızlıca stabil hale gelir ama kök neden hâlâ bilinmez ve sorun tekrarlayabilir.',
@@ -192,6 +226,7 @@ export function offlineMap(depth: number): MapResponse {
         },
         {
           id: `${prefix}-b`,
+          topic: 'observability',
           title: 'Önce kök nedeni bul',
           logic: 'Nedeni bilmeden yapılan müdahale tahmindir; doğru teşhis yanlış tedaviyi önler.',
           leadsTo: 'Kalıcı bir çözüme yaklaşırsın ama bu sürede etki devam eder.',
@@ -202,6 +237,7 @@ export function offlineMap(depth: number): MapResponse {
         },
         {
           id: `${prefix}-c`,
+          topic: 'team',
           title: 'Önce etkiyi sınırla ve haber ver',
           logic: 'Sorunu çözmeden önce yayılmasını engellemek ve doğru kişileri bilgilendirmek koordinasyonu sağlar.',
           leadsTo: 'Ekip ve paydaşlar aynı resme bakar; teknik çözüm biraz gecikebilir.',
@@ -222,6 +258,7 @@ export function offlineMap(depth: number): MapResponse {
     paths: [
       {
         id: `${prefix}-a`,
+        topic: depth === 2 ? 'test' : 'team',
         title: depth === 2 ? 'Ölç, sonra ilerle' : 'Postmortem yaz',
         logic:
           depth === 2
@@ -235,6 +272,7 @@ export function offlineMap(depth: number): MapResponse {
       },
       {
         id: `${prefix}-b`,
+        topic: depth === 2 ? 'deploy' : 'observability',
         title: depth === 2 ? 'Kademeli yayına al' : 'Otomatik koruma ekle',
         logic:
           depth === 2
@@ -250,12 +288,28 @@ export function offlineMap(depth: number): MapResponse {
   };
 }
 
+// Offline comparison: word overlap with what the path says will happen. Honest about being rough.
+export function offlineCompare(path: PusulaPath, prediction: string): CompareResponse {
+  const score = overlapScore(prediction, `${path.leadsTo} ${path.risk}`);
+  const alignment: Alignment = score >= 0.3 ? 'close' : score >= 0.12 ? 'partial' : 'missed';
+  return {
+    offline: true,
+    alignment,
+    matched:
+      alignment === 'missed'
+        ? 'Tahminin bu yolun anlatımıyla az kelime paylaşıyor; farklı bir açıdan bakmış olabilirsin.'
+        : 'Tahminin bu yolun anlatımındaki bazı noktalara değiniyor.',
+    missedQuestion: path.selfQuestion,
+  };
+}
+
 export function offlineEvaluate(customPath: string): EvaluateResponse {
   return {
     offline: true,
     path: {
       id: `custom-${Date.now()}`,
       custom: true,
+      topic: 'team',
       title: customPath.slice(0, 60),
       logic: 'Bu senin önerdiğin yol. Hangi ilkeye dayandığını kendine sor: hız mı, güvenlik mi, öğrenme mi?',
       leadsTo: 'Çevrimdışı moddayız; bu yolun nereye varacağını değerlendirmek için API anahtarı gerekli.',

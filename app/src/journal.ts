@@ -1,4 +1,15 @@
 import { ChoiceId, GoalId, LevelId, RoleId, ScenarioData } from './types';
+import {
+  Alignment,
+  NotebookEntry,
+  SkillEvent,
+  TOPICS,
+  TopicId,
+  applySkillEvents,
+  isDue,
+  skillScore,
+  tierFor,
+} from './skills';
 
 // Personal learning journal: lives only in this browser (no account, no server).
 const STORAGE_KEY = 'se-primer-journal-v1';
@@ -29,25 +40,55 @@ export interface PusulaRecord {
   reflection?: string;
 }
 
+export interface PredictionRecord {
+  date: string;
+  topic: TopicId;
+  alignment: Alignment;
+}
+
 export interface Journal {
   name: string;
   runs: RunRecord[];
   researched: string[]; // concepts the player marked as researched
   pusula: PusulaRecord[];
+  skills: Partial<Record<TopicId, number>>; // mastery 0-100; missing = not yet measured
+  skillEvents: SkillEvent[]; // growth timeline (latest last)
+  conceptTopics: Record<string, TopicId>; // which topic a researched concept belongs to
+  notebook: NotebookEntry[]; // concepts explained in the player's own words
+  predictions: PredictionRecord[];
 }
 
-export const emptyJournal: Journal = { name: '', runs: [], researched: [], pusula: [] };
+export const emptyJournal: Journal = {
+  name: '',
+  runs: [],
+  researched: [],
+  pusula: [],
+  skills: {},
+  skillEvents: [],
+  conceptTopics: {},
+  notebook: [],
+  predictions: [],
+};
+
+const obj = <T,>(v: unknown, fallback: T): T => (v && typeof v === 'object' && !Array.isArray(v) ? (v as T) : fallback);
+const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v as T[]) : []);
 
 export function loadJournal(): Journal {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return emptyJournal;
     const parsed = JSON.parse(raw) as Partial<Journal>;
+    // Older journals lack the skill fields; fill them so existing players keep their history
     return {
       name: typeof parsed.name === 'string' ? parsed.name : '',
-      runs: Array.isArray(parsed.runs) ? parsed.runs : [],
-      researched: Array.isArray(parsed.researched) ? parsed.researched : [],
-      pusula: Array.isArray(parsed.pusula) ? parsed.pusula : [],
+      runs: arr(parsed.runs),
+      researched: arr(parsed.researched),
+      pusula: arr(parsed.pusula),
+      skills: obj(parsed.skills, {}),
+      skillEvents: arr(parsed.skillEvents),
+      conceptTopics: obj(parsed.conceptTopics, {}),
+      notebook: arr(parsed.notebook),
+      predictions: arr(parsed.predictions),
     };
   } catch {
     return emptyJournal;
@@ -81,6 +122,9 @@ export interface Insights {
   nextResearch?: string; // first concept from the last run that is not researched yet
   suggestedLevel?: LevelId;
   suggestionReason?: string;
+  dueReviews: number; // notebook concepts whose review date has come
+  pendingExplanations: string[]; // researched concepts not yet explained in own words
+  predictionAccuracy?: { recent: number; earlier?: number; count: number }; // 0..1
 }
 
 const LEVEL_ORDER: LevelId[] = ['new', 'mid', 'senior'];
@@ -95,7 +139,26 @@ export function getInsights(journal: Journal, scenario: ScenarioData): Insights 
     pusulaCount: journal.pusula.length,
     lastPusula: journal.pusula[journal.pusula.length - 1],
     lastRun,
+    dueReviews: journal.notebook.filter((e) => isDue(e)).length,
+    pendingExplanations: journal.researched.filter(
+      (c) => !journal.notebook.some((e) => e.concept === c),
+    ),
   };
+
+  // Prediction accuracy: last 5 vs the 5 before, so growth is visible
+  const score = (list: PredictionRecord[]) =>
+    list.reduce((s, p) => s + (p.alignment === 'close' ? 1 : p.alignment === 'partial' ? 0.5 : 0), 0) / list.length;
+  const preds = journal.predictions;
+  if (preds.length > 0) {
+    const recent = preds.slice(-5);
+    const earlier = preds.slice(-10, -5);
+    insights.predictionAccuracy = {
+      recent: score(recent),
+      earlier: earlier.length ? score(earlier) : undefined,
+      count: preds.length,
+    };
+  }
+
   if (!lastRun) {
     // Pusula-only players still get a "next research" suggestion
     insights.nextResearch = insights.lastPusula?.research.find((item) => !journal.researched.includes(item));
@@ -144,8 +207,27 @@ export function learnerContext(journal: Journal, insights: Insights) {
     weakTopic: insights.weakTopic,
     lastReflection: insights.lastRun?.reflection ?? insights.lastPusula?.reflection,
     recentQuestions: journal.pusula.slice(-3).map((p) => p.question),
+    // Only measured topics: lets the model speak more technically where the player is strong
+    skills: Object.fromEntries(
+      TOPICS.filter((t) => journal.skills[t.id] !== undefined).map((t) => [
+        t.id,
+        tierFor(journal.skills[t.id]!),
+      ]),
+    ),
   };
 }
+
+export function recordSkillEvents(journal: Journal, events: SkillEvent[], fallbackLevel: LevelId | null): Journal {
+  if (events.length === 0) return journal;
+  return {
+    ...journal,
+    skills: applySkillEvents(journal.skills, events, fallbackLevel),
+    skillEvents: [...journal.skillEvents, ...events].slice(-150),
+  };
+}
+
+export const topicScore = (journal: Journal, topic: TopicId, fallbackLevel: LevelId | null) =>
+  skillScore(journal.skills, topic, fallbackLevel);
 
 export function upsertPusula(journal: Journal, record: PusulaRecord): Journal {
   const existing = journal.pusula.find((p) => p.id === record.id);

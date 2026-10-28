@@ -28,18 +28,45 @@ import {
   PusulaProfile,
 } from '../pusula/model';
 import { PusulaRecord } from '../journal';
+import { CompareResponse } from '../pusula/model';
+import { LevelId } from '../types';
+import {
+  Alignment,
+  SkillEvent,
+  TopicId,
+  event as skillEvent,
+  skillScore,
+  tierFor,
+  tierLabel,
+  TOPICS,
+} from '../skills';
 
 type Stage = 'ask' | 'clarify' | 'map' | 'summary';
+
+interface Prediction {
+  text: string;
+  result?: CompareResponse;
+  revealed: boolean;
+}
 
 interface PusulaFlowProps {
   profile: PusulaProfile;
   learner: unknown;
   researched: string[];
-  onToggleResearched: (item: string) => void;
+  skills: Partial<Record<TopicId, number>>;
+  onToggleResearched: (item: string, topic?: TopicId) => void;
   onSaveRecord: (record: PusulaRecord) => void;
   onUpdateReflection: (id: string, text: string) => void;
+  onSkillEvents: (events: SkillEvent[]) => void;
+  onPrediction: (topic: TopicId, alignment: Alignment) => void;
   onExit: () => void;
 }
+
+const ALIGNMENT_TEXT: Record<Alignment, { label: string; color: string }> = {
+  close: { label: 'Yakın tahmin', color: '#7BC8A4' },
+  partial: { label: 'Kısmen gördün', color: '#F2B266' },
+  missed: { label: 'Farklı bir yere baktın', color: '#A7A3D9' },
+};
 
 const EXAMPLES = [
   'Canlıda veritabanı sorguları aniden yavaşladı, nereden başlamalıyım?',
@@ -62,11 +89,20 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
   profile,
   learner,
   researched,
+  skills,
   onToggleResearched,
   onSaveRecord,
   onUpdateReflection,
+  onSkillEvents,
+  onPrediction,
   onExit,
 }) => {
+  const [predictions, setPredictions] = useState<Record<string, Prediction>>({});
+
+  // Fading support per path: the topic's mastery decides whether details open directly,
+  // a prediction is offered, or a prediction is required first
+  const tierOf = (path: PusulaPath): LevelId =>
+    path.topic ? tierFor(skillScore(skills, path.topic, profile.level as LevelId)) : (profile.level as LevelId);
   const [stage, setStage] = useState<Stage>('ask');
   const [question, setQuestion] = useState('');
   const [clarifyQuestions, setClarifyQuestions] = useState<string[]>([]);
@@ -78,11 +114,13 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [offline, setOffline] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [recordId, setRecordId] = useState<string | null>(null);
   const [reflection, setReflection] = useState('');
   const [reflectionSaved, setReflectionSaved] = useState(false);
 
   const isNew = profile.level === 'new';
+  const autoOpen = (node: PusulaNode) => (node.paths[0] && tierOf(node.paths[0]) === 'new' ? node.paths[0].id : null);
   const clarifications: Clarification[] = clarifyQuestions.map((q, i) => ({
     question: q,
     answer: answers[i]?.trim() ?? '',
@@ -106,6 +144,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
     run('Durumunu anlamaya çalışıyorum…', async () => {
       const res = await callPusula<ClarifyResponse>({ mode: 'clarify', question, profile, learner });
       setOffline(Boolean(res.offline));
+      setBusy(Boolean(res.busy));
       setClarifyQuestions(res.questions);
       setAnswers(res.questions.map(() => ''));
       setStage('clarify');
@@ -126,6 +165,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
       learner,
     });
     setOffline((prev) => prev || Boolean(res.offline));
+    setBusy((prev) => prev || Boolean(res.busy));
     return { id: `node-${depth}-${Date.now()}`, depth, situation: res.situation, paths: res.paths } as PusulaNode;
   };
 
@@ -134,7 +174,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
       const node = await fetchNode(1, []);
       setNodes([node]);
       setActiveIndex(0);
-      setExpanded(isNew ? node.paths[0]?.id ?? null : null);
+      setExpanded(autoOpen(node));
       setStage('map');
     });
 
@@ -153,7 +193,22 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
     setStage('summary');
   };
 
+  const submitPrediction = (path: PusulaPath) => {
+    const text = predictions[path.id]?.text?.trim() ?? '';
+    run('Tahminini haritayla karşılaştırıyorum…', async () => {
+      const res = await callPusula<CompareResponse>({ mode: 'compare', question, path, prediction: text, profile });
+      setOffline((prev) => prev || Boolean(res.offline));
+      setBusy((prev) => prev || Boolean(res.busy));
+      setPredictions((prev) => ({ ...prev, [path.id]: { text, result: res, revealed: true } }));
+      if (path.topic) onPrediction(path.topic, res.alignment);
+    });
+  };
+
+  const reveal = (path: PusulaPath) =>
+    setPredictions((prev) => ({ ...prev, [path.id]: { text: prev[path.id]?.text ?? '', revealed: true } }));
+
   const choosePath = (path: PusulaPath) => {
+    if (path.topic) onSkillEvents([skillEvent(path.topic, 1, `Pusula: "${path.title}" yolunu izledi`)]);
     // Choosing on an earlier node rewrites the rest of the map from there
     const updated = nodes.slice(0, activeIndex + 1).map((n, i) =>
       i === activeIndex ? { ...n, chosenPathId: path.id } : n,
@@ -167,7 +222,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
       const next = await fetchNode(activeNode.depth + 1, updated);
       setNodes([...updated, next]);
       setActiveIndex(updated.length);
-      setExpanded(isNew ? next.paths[0]?.id ?? null : null);
+      setExpanded(autoOpen(next));
     });
   };
 
@@ -183,6 +238,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
         learner,
       });
       setOffline((prev) => prev || Boolean(res.offline));
+      setBusy((prev) => prev || Boolean(res.busy));
       setNodes((prev) =>
         prev.map((n, i) => (i === activeIndex ? { ...n, paths: [...n.paths, res.path] } : n)),
       );
@@ -201,6 +257,7 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
     setReflection('');
     setReflectionSaved(false);
     setOffline(false);
+    setBusy(false);
   };
 
   return (
@@ -230,7 +287,9 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
           data-testid="pusula-offline"
           className="mb-4 px-3 py-2 rounded-xl bg-[#F2B266]/10 border border-[#F2B266]/30 text-[12px] text-[#F2B266]"
         >
-          Çevrimdışı örnek harita: genel bir düşünme iskeleti gösteriliyor. Sorununa özel yollar için sunucuda API anahtarı gerekli.
+          {busy
+            ? 'Yapay zekâ modelleri şu an çok yoğun; genel bir düşünme iskeleti gösteriliyor. Birkaç dakika sonra yeni bir soruyla tekrar dene.'
+            : 'Çevrimdışı örnek harita: genel bir düşünme iskeleti gösteriliyor. Sorununa özel yollar için sunucuda API anahtarı gerekli.'}
         </div>
       )}
 
@@ -403,6 +462,10 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
             {activeNode.paths.map((path, i) => {
               const isOpen = expanded === path.id;
               const isChosen = activeNode.chosenPathId === path.id;
+              const tier = tierOf(path);
+              const prediction = predictions[path.id];
+              const isRevealed = tier === 'new' || Boolean(prediction?.revealed);
+              const topicShort = TOPICS.find((t) => t.id === path.topic)?.short;
               return (
                 <article
                   key={path.id}
@@ -423,6 +486,11 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
                     </span>
                     <span className="flex-1 font-heading text-[15px] font-semibold text-[#E8EEF5]">
                       {path.title}
+                      {topicShort && (
+                        <span data-testid="pusula-path-topic" className="block font-mono text-[11px] font-normal text-[#9FB0C3] mt-0.5">
+                          {topicShort} · {tierLabel[tier]}
+                        </span>
+                      )}
                       {isChosen && (
                         <span className="block font-mono text-[11px] font-normal text-[#5FB3A8] mt-0.5">izlediğin yol</span>
                       )}
@@ -434,8 +502,77 @@ export const PusulaFlow: React.FC<PusulaFlowProps> = ({
                     )}
                   </button>
 
-                  {isOpen && (
+                  {/* Predict first: the player guesses where this path leads before seeing it */}
+                  {isOpen && !isRevealed && (
+                    <div data-testid="pusula-predict" className="px-4 pb-4 flex flex-col gap-2.5 text-[13px]">
+                      <Detail label="Hangi mantıkla" text={path.logic} testId="path-logic-preview" />
+                      <label className="text-[#E8EEF5] font-semibold" htmlFor={`predict-${path.id}`}>
+                        Önce tahmin et: bu yoldan gidersen ne olur, risk nerede?
+                      </label>
+                      {tier === 'senior' && (
+                        <p data-testid="pusula-predict-required" className="text-[12px] text-[#A7A3D9]">
+                          Bu konuda güçlüsün; sonucu görmeden önce tahmin etmen gerekiyor.
+                        </p>
+                      )}
+                      <textarea
+                        id={`predict-${path.id}`}
+                        data-testid="pusula-predict-input"
+                        rows={2}
+                        maxLength={400}
+                        value={prediction?.text ?? ''}
+                        onChange={(e) =>
+                          setPredictions((prev) => ({ ...prev, [path.id]: { text: e.target.value, revealed: false } }))
+                        }
+                        placeholder="Kendi cümlenle yaz…"
+                        className="w-full px-3.5 py-2.5 rounded-[14px] bg-[#0F1B2D] border border-[#2A3E5C] text-[#E8EEF5] text-sm placeholder:text-[#9FB0C3]/60 focus:outline-none focus:border-[#5FB3A8] resize-none"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          data-testid="pusula-predict-submit"
+                          disabled={(prediction?.text?.trim().length ?? 0) < 5}
+                          onClick={() => submitPrediction(path)}
+                          className={`flex-1 min-h-[48px] rounded-[14px] font-mono text-[13px] font-bold border ${
+                            (prediction?.text?.trim().length ?? 0) >= 5
+                              ? 'bg-[#A7A3D9]/15 border-[#A7A3D9]/50 text-[#A7A3D9] cursor-pointer'
+                              : 'border-[#2A3E5C] text-[#9FB0C3]/50 cursor-not-allowed'
+                          }`}
+                        >
+                          Tahminimi karşılaştır
+                        </button>
+                        {tier === 'mid' && (
+                          <button
+                            type="button"
+                            data-testid="pusula-reveal"
+                            onClick={() => reveal(path)}
+                            className="min-h-[48px] px-3 rounded-[14px] font-mono text-[12px] text-[#9FB0C3] border border-[#2A3E5C] hover:text-[#E8EEF5] cursor-pointer"
+                          >
+                            Tahminsiz göster
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {isOpen && isRevealed && (
                     <div data-testid="pusula-path-details" className="px-4 pb-4 flex flex-col gap-3 text-[13px] leading-relaxed">
+                      {prediction?.result && (
+                        <div
+                          data-testid="pusula-compare"
+                          className="rounded-xl bg-[#101C2E] border border-[#2A3E5C] px-3 py-2.5 flex flex-col gap-1"
+                        >
+                          <span
+                            data-testid="pusula-compare-alignment"
+                            className="font-mono text-[11px] font-bold uppercase tracking-wider"
+                            style={{ color: ALIGNMENT_TEXT[prediction.result.alignment].color }}
+                          >
+                            {ALIGNMENT_TEXT[prediction.result.alignment].label}
+                          </span>
+                          <p className="text-[12px] text-[#9FB0C3] italic">Senin tahminin: “{prediction.text}”</p>
+                          <p className="text-[#E8EEF5]">{prediction.result.matched}</p>
+                          <p className="text-[#A7A3D9]">{prediction.result.missedQuestion}</p>
+                        </div>
+                      )}
                       <Detail label="Hangi mantıkla" text={path.logic} testId="path-logic" />
                       <Detail label="Bu yoldan gidersen" text={path.leadsTo} testId="path-leads-to" />
                       <Detail label="Risk" text={path.risk} tone="danger" testId="path-risk" />
@@ -567,7 +704,7 @@ interface SummaryViewProps {
   question: string;
   nodes: PusulaNode[];
   researched: string[];
-  onToggleResearched: (item: string) => void;
+  onToggleResearched: (item: string, topic?: TopicId) => void;
   reflection: string;
   reflectionSaved: boolean;
   onReflectionChange: (text: string) => void;
@@ -592,6 +729,10 @@ const SummaryView: React.FC<SummaryViewProps> = ({
     .map((n, i) => ({ node: n, index: i, path: n.paths.find((p) => p.id === n.chosenPathId) }))
     .filter((c) => c.path);
   const research = Array.from(new Set(chosen.flatMap((c) => c.path!.research)));
+  // Each concept is filed under the topic of the path it came from
+  const topicOf: Record<string, TopicId | undefined> = Object.fromEntries(
+    chosen.flatMap((c) => c.path!.research.map((r) => [r, c.path!.topic])),
+  );
   const untaken = nodes.reduce((sum, n) => sum + n.paths.filter((p) => p.id !== n.chosenPathId).length, 0);
 
   return (
@@ -642,7 +783,7 @@ const SummaryView: React.FC<SummaryViewProps> = ({
                 type="button"
                 data-testid="pusula-research-item"
                 aria-pressed={done}
-                onClick={() => onToggleResearched(item)}
+                onClick={() => onToggleResearched(item, topicOf[item])}
                 className={`inline-flex items-center gap-1.5 min-h-[40px] px-3 py-1.5 rounded-full border font-mono text-[11px] cursor-pointer ${
                   done
                     ? 'bg-[#5FB3A8]/15 border-[#5FB3A8] text-[#5FB3A8]'

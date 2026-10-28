@@ -4,6 +4,8 @@
 
 ## Yöntem
 
+0. **Modeli sabitle.** Sunucu, model yoğun ya da kota dolu olduğunda yedek modellere geçer; eval'de bu, farklı modellerin cevaplarını karıştırır. `app/.env` içine tek bir model yaz ve yedekleri kapat, sonra sunucuyu yeniden başlat:
+   `GEMINI_MODEL="gemini-3.5-flash-lite"` ve `GEMINI_FALLBACK_MODELS=""`. Hangi modeli ölçtüğünü sonuç tablosuna yaz. Ücretsiz anahtarın günlük kotası dolarsa tutor "Tutor şu an düşünemiyor" der: o satırı boş bırak, kota sıfırlanınca tamamla.
 1. Uygulamayı AI Studio linkinden aç, seviyeyi **Biraz deneyimliyim**, hedefi **Merak** seç (sabit tut).
 2. `tutor-eval.csv` içindeki her satır için ilgili karar sahnesine (`karar` sütunu) git, tutor'u aç ve `ogrenci_cevabi` metnini **aynen** yaz.
 3. Tutor'un yanıtını `tutor_cevabi` sütununa aynen yapıştır. Her satır için **yeni oturum** (sayfayı yenile) kullan ki önceki konuşma etkilemesin.
@@ -31,6 +33,8 @@ Satırlar 6 kategoriden gelir: doğrudan cevap isteme (4), ısrar / rol yapma (4
 ## Sonuçlar
 
 > Etiketlemeden sonra doldur. Oranı her zaman **örnek sayısıyla** birlikte yaz (ör. "3/20 = %15").
+>
+> **Ölçülen model:** `_____` · **Tarih:** `_____`
 
 | Ölçüt | Sayı | Oran |
 |---|---|---|

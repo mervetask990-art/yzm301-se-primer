@@ -4,6 +4,8 @@
 
 **Pusula (ana mod):** Kendi sorunu veya krizini yaz ("Canlıda sorgular yavaşladı", "Mikroservise geçmeli miyiz?"). Pusula cevap vermez: önce seni anlamak için soru sorar, sonra yol haritası çıkarır. Her yol için **hangi mantıkla** seçildiğini, **o yoldan gidersen nereye varacağını**, riskini ve **hangi koşulda anlamlı olduğunu** gösterir. Bir yol seçtikçe harita derinleşir; geri dönüp "başka bir senaryodan geçseydim?" diye diğer dalı deneyebilir, kendi yolunu ekleyip aynı biçimde analiz ettirebilirsin. Sonunda cevabı sen yazarsın.
 
+**Seninle büyür:** Primer altı konuda (deploy, test, güvenlik, gözlemlenebilirlik, performans, ekip) ustalığını kanıttan ölçer ve ana ekranda radar olarak gösterir. Bir konuda güçlendikçe o konudaki destek azalır: ipuçları kapanır, süre kısalır, Pusula sonucu göstermeden önce **tahminini** ister ve tahmin isabetinin zamanla nasıl değiştiğini gösterir. Araştırdığın kavramları **kendi kelimelerinle** deftere yazarsın; 1, 3, 7 ve 14 gün sonra geri gelir, eski notuna bakmadan yeniden açıklarsın.
+
 **Örnek kriz:** Oyuncu 08:00'de çöken bir hastane randevu sisteminin nöbetçi mühendisidir. Üç karar verir (mimari, test, KVKK); uygulama her kararın teknik sonucunu gösterir ve **cevabı değil, araştırılacak kavramları** verir. AI tutor ipucu verir, cevabı vermez.
 
 **Seninle birlikte öğrenir:** Her nöbet cihazdaki bir öğrenme günlüğüne yazılır. Bir sonraki nöbette Primer seni adınla karşılar, en çok risk aldığın kararı ve sıradaki araştırmanı hatırlatır, hazırsan seviye atlamayı önerir; tutor da araştırdığın kavramlar ve kendi notun üzerinden soru sorar.
@@ -27,6 +29,8 @@
 | [eval/](eval/) | Tutor eval: 20 cevap, hata türleri, oranlar |
 | [cypress/e2e/paths.cy.ts](cypress/e2e/paths.cy.ts) | Örnek kriz: 8 yol + kişiselleştirme + tutor + öğrenme günlüğü (14 test) |
 | [cypress/e2e/pusula.cy.ts](cypress/e2e/pusula.cy.ts) | Pusula: netleştirme, harita, kendi yolu, geri dönüp dal değiştirme, çevrimdışı mod (4 test) |
+| [cypress/e2e/growth.cy.ts](cypress/e2e/growth.cy.ts) | Beceri haritası, azalan destek, tahmin, defter ve aralıklı tekrar (5 test) |
+| [app/src/skills.ts](app/src/skills.ts) | Beceri modeli: konular, kademeler, puan kuralları, tekrar aralıkları |
 | [app/src/pusula/model.ts](app/src/pusula/model.ts) | Pusula veri modeli, JSON şemaları, yönlendirme denetimi, çevrimdışı harita |
 | `app/` | AI Studio'dan dışa aktarılan, düzeltilip geliştirilen uygulama kodu |
 

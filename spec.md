@@ -55,6 +55,41 @@ Primer oyuncuyla birlikte öğrenir: her nöbet bittiğinde tarayıcıda (localS
 
 Günlük "Günlüğü sıfırla" ile silinir; tarayıcı depolaması kapalıysa oyun günlüksüz çalışmaya devam eder.
 
+### Seninle büyüyen Primer (beceri haritası)
+
+Girişte seçilen seviye yalnızca başlangıç tahminidir. Primer her konudaki ustalığı **kanıttan** ölçer ve desteği konu başına ayarlar.
+
+**Konular:** Mimari ve deploy, Test, Güvenlik ve KVKK, Gözlemlenebilirlik, Performans, Ekip ve iletişim. Her biri 0–100 puan; ölçülmemiş konu seçilen seviyeden başlar (yeni 15, orta 45, deneyimli 70).
+
+| Kanıt | Puan | Konu |
+|---|---|---|
+| Krizde A seçimi (ipucusuz / ipucuyla) | +8 / +5 | Kararın konusu (K1 deploy, K2 test, K3 güvenlik) |
+| Krizde B seçimi | −3 | Kararın konusu |
+| Süre aşımı | −5 (+ ekip −2) | Kararın konusu |
+| Denenmemiş yama testsiz yayında (B+B) | −2 | Test |
+| Kavramı "araştırdım" diye işaretlemek | +3 | Kavramın konusu |
+| Kavramı kendi kelimeleriyle deftere yazmak | +4 | Kavramın konusu |
+| Aralıklı tekrar: oturmuş / yolda / boşluk var | +6 / +2 / −2 | Kavramın konusu |
+| Pusula tahmini: yakın / kısmen / farklı | +5 / +2 / 0 | Yolun konusu |
+| Pusula'da bir yolu izlemek | +1 | Yolun konusu |
+
+Puan "doğru cevabı" değil, **dikkatli karar ve anlama kanıtını** ölçer; son ekranda bu nöbetin değişimi, ana ekranda radar grafiği ve son 4 değişim gösterilir.
+
+**Azalan destek:** Her karar ve her Pusula yolu, kendi konusunun puanına göre destek alır.
+
+| Konu puanı | Kademe | Krizde | Pusula'da |
+|---|---|---|---|
+| 0–34 | başlangıç | İpucu açık, süre yok | Yol ayrıntıları doğrudan açık |
+| 35–69 | gelişen | İpucu isteğe bağlı, süre yok | Önce tahmin istenir, "Tahminsiz göster" seçeneği var |
+| 70–84 | güçlü | İpucu yok, 60 sn | Tahmin zorunlu |
+| 85–100 | güçlü | İpucu yok, **45 sn** | Tahmin zorunlu |
+
+Kademe girişte seçilen seviyeden farklıysa kararın üstünde nedeni yazar ("Mimari ve deploy konusunda güçlendin (80/100): ipuçları kapandı").
+
+**Önce tahmin et, sonra gör:** Pusula bir yolun "nereye varır" ve "risk" alanlarını göstermeden önce oyuncunun tahminini ister. Sunucu tahmini karşılaştırır: `close` / `partial` / `missed` ve kaçırılan noktaya **söylemeden** yönelten bir soru. Son 5 tahminin isabeti önceki 5 ile karşılaştırılarak ana ekranda gösterilir.
+
+**Defter ve aralıklı tekrar:** Araştırılan her kavram oyuncunun kendi 1–2 cümlesiyle deftere yazılır. Kavram 1, 3, 7 ve 14 gün sonra geri gelir; oyuncu eski notunu görmeden yeniden açıklar, sunucu `solid` / `partial` / `gap` der ve bir soru sorar. `solid` bir sonraki aralığa geçirir, `partial` aynı aralığı tekrarlar, `gap` başa döndürür; 14 günü geçen kavram ayda bir gelir.
+
 ## 3b. Pusula akışı
 
 ```mermaid
@@ -150,7 +185,22 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 - *When* bir yolu açar ve "Bu yoldan ilerle"ye basar
 - *Then* yol kartında mantık, varış, risk, koşul ve "kendine sor" alanları görünür, hiçbir kart "önerilen" veya "doğru yol" diye işaretlenmez, bir sonraki karar noktası şimdiye kadarki seçimler (`trail`) bağlamıyla istenir ve oyuncu iz çubuğundan önceki noktaya dönüp başka bir dal seçebilir.
 
-> **Not:** Bir arkadaşa oynatıldığında ilk takılınan yer buraya **KÖ-8** olarak eklenecek.
+**KÖ-8 · Destek konu başına azalır**
+- *Given* oyuncu "Biraz deneyimliyim" seçti; günlükte deploy 80, güvenlik 20, test ölçülmemiş
+- *When* örnek krizi oynar
+- *Then* K1'de ipucu yoktur, 60 sn sayaç ve "güçlendin" notu görünür; K2'de seçilen seviyeye göre isteğe bağlı ipucu vardır; K3'te ipucu açık, sayaç yoktur ve "zorlanıyorsun" notu görünür. Deploy 85 ve üstündeyse sayaç 45 sn'dir.
+
+**KÖ-9 · Güçlü konuda önce tahmin**
+- *Given* test puanı 80 ve Pusula bir test yolu gösterdi
+- *When* oyuncu yolu açar
+- *Then* "nereye varır" alanı gizlidir, tahmin zorunludur ("Tahminsiz göster" yoktur); tahmin gönderilince karşılaştırma kartı (yakınlık + soru) ve yolun ayrıntıları görünür, tahmin günlüğe yazılır ve ana ekranda tahmin isabeti gösterilir.
+
+**KÖ-10 · Kavram unutulmadan geri gelir**
+- *Given* oyuncu bir kavramı araştırdı
+- *When* defterde kendi kelimeleriyle açıklar ve tekrar günü gelir
+- *Then* kavram "Bugün tekrar zamanı" bölümünde eski notu gizli olarak çıkar; yeniden açıklama gönderilince sonuç ve bir soru gösterilir, eski not karşılaştırma için açılır, `solid` sonuçta sonraki tekrar 3 gün sonraya kayar.
+
+> **Not:** Bir arkadaşa oynatıldığında ilk takılınan yer buraya **KÖ-11** olarak eklenecek.
 
 ## 6. İzlenebilirlik
 
@@ -162,6 +212,9 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 | KÖ-4 | `KÖ-4 tutor paneli soru ile yanıt verir` (mock) | `eval/tutor-eval.csv` (gerçek model, 20 cevap) |
 | KÖ-5 | `8 yol` (her adımda üç kart kontrolü) | — |
 | KÖ-6 | `KÖ-6 ikinci nöbette geçmişi hatırlar ve kişiselleştirir` | — |
+| KÖ-8 | `cypress/e2e/growth.cy.ts`: `KÖ-8 ...`, `çok güçlü konuda süre 45 saniyeye iner`, `nöbet sonunda beceri değişimini gösterir...` | — |
+| KÖ-9 | `cypress/e2e/growth.cy.ts`: `KÖ-9 ...` | — |
+| KÖ-10 | `cypress/e2e/growth.cy.ts`: `KÖ-10 ...` | — |
 | KÖ-7 | `cypress/e2e/pusula.cy.ts`: `KÖ-7 ...`, `oyuncunun kendi yolunu ekler...`, `çevrimdışı örnek harita...` | Pusula yanıtlarında yönlendirme oranı (isteğe bağlı, `eval/README.md`) |
 
 KÖ-4 Cypress'te mock ile yalnızca **arayüzü** test eder; tutor'un gerçek davranışı **eval** ile ölçülür.

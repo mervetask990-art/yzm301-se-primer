@@ -12,6 +12,7 @@ import {
   PenLine,
 } from 'lucide-react';
 import { ChoiceId, ScenarioData } from '../types';
+import { SkillEvent, TOPICS, TopicId, tierFor, tierLabel } from '../skills';
 
 interface EndingScreenProps {
   scenario: ScenarioData;
@@ -26,6 +27,8 @@ interface EndingScreenProps {
   researched: string[];
   onToggleResearched: (item: string) => void;
   onSaveReflection: (text: string) => void;
+  skillEvents: SkillEvent[]; // what this run changed in the skill map
+  skills: Partial<Record<TopicId, number>>;
 }
 
 export const EndingScreen: React.FC<EndingScreenProps> = ({
@@ -41,7 +44,16 @@ export const EndingScreen: React.FC<EndingScreenProps> = ({
   researched,
   onToggleResearched,
   onSaveReflection,
+  skillEvents,
+  skills,
 }) => {
+  // Net change per topic in this run, in skill-map order
+  const deltas = TOPICS.map((t) => ({
+    ...t,
+    delta: skillEvents.filter((e) => e.topic === t.id).reduce((s, e) => s + e.delta, 0),
+    touched: skillEvents.some((e) => e.topic === t.id),
+    score: skills[t.id],
+  })).filter((t) => t.touched);
   const [reflection, setReflection] = useState('');
   const [reflectionSaved, setReflectionSaved] = useState(false);
   const firstName = name.trim();
@@ -121,6 +133,35 @@ export const EndingScreen: React.FC<EndingScreenProps> = ({
           {firstName ? `${firstName}, bu` : 'Bu'} senin {runNumber}. nöbetin.
         </p>
       </section>
+
+      {/* Skill map changes from this run */}
+      {deltas.length > 0 && (
+        <div data-testid="skill-delta" className="flex flex-col rounded-[16px] bg-[#17263C] border border-[#2A3E5C] p-4 mb-4 gap-2">
+          <span className="font-mono text-[11px] text-[#9FB0C3] uppercase tracking-wider font-semibold">
+            Bu nöbette becerilerin
+          </span>
+          {deltas.map((d) => (
+            <div key={d.id} data-testid={`skill-delta-${d.id}`} className="flex items-center gap-3">
+              <span className="flex-1 text-[13px] text-[#E8EEF5]">{d.label}</span>
+              <span
+                className={`font-mono text-[13px] font-bold ${
+                  d.delta > 0 ? 'text-[#7BC8A4]' : d.delta < 0 ? 'text-[#E58A7B]' : 'text-[#9FB0C3]'
+                }`}
+              >
+                {d.delta > 0 ? `+${d.delta}` : d.delta}
+              </span>
+              {d.score !== undefined && (
+                <span className="font-mono text-[11px] text-[#9FB0C3] w-24 text-right">
+                  {d.score}/100 · {tierLabel[tierFor(d.score)]}
+                </span>
+              )}
+            </div>
+          ))}
+          <p className="text-[11px] text-[#9FB0C3] mt-1">
+            Puan doğru cevabı değil, dikkatli karar kanıtını ölçer. Bir sonraki nöbette destek buna göre ayarlanır.
+          </p>
+        </div>
+      )}
 
       {/* Card 1: Izlenen Yol (Path Summary) */}
       <div className="flex flex-col rounded-[16px] bg-[#17263C] border border-[#2A3E5C] p-4 mb-4">

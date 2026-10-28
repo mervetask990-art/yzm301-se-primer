@@ -1,8 +1,10 @@
 import React from 'react';
-import { Terminal, Server, Flag, CheckCircle2, ArrowRight, BookMarked, User, TrendingUp, Search, Compass, Siren } from 'lucide-react';
+import { Terminal, Server, Flag, CheckCircle2, ArrowRight, BookMarked, User, TrendingUp, Search, Compass, Siren, BookOpen, Target } from 'lucide-react';
 import { LanternLogo } from './LanternLogo';
 import { LevelId, RoleId, GoalId, ScenarioData } from '../types';
 import { Insights, levelLabel } from '../journal';
+import { SkillEvent, TopicId, topicLabel } from '../skills';
+import { SkillRadar } from './SkillRadar';
 
 interface IntakeScreenProps {
   scenario: ScenarioData;
@@ -14,6 +16,9 @@ interface IntakeScreenProps {
   onSelectGoal: (goal: GoalId) => void;
   onStart: () => void;
   onStartPusula: () => void;
+  onOpenNotebook: () => void;
+  skills: Partial<Record<TopicId, number>>;
+  skillEvents: SkillEvent[];
   name: string;
   onNameChange: (name: string) => void;
   insights: Insights;
@@ -30,13 +35,22 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
   onSelectGoal,
   onStart,
   onStartPusula,
+  onOpenNotebook,
+  skills,
+  skillEvents,
   name,
   onNameChange,
   insights,
   onResetJournal,
 }) => {
   const isComplete = Boolean(level && role && goal);
-  const isReturning = insights.runCount > 0 || insights.pusulaCount > 0;
+  const hasSkills = Object.keys(skills).length > 0;
+  // Any evidence counts: a prediction or a notebook entry alone also makes a returning player
+  const isReturning = insights.runCount > 0 || insights.pusulaCount > 0 || hasSkills;
+  const showNotebook = insights.researchedCount > 0;
+  const recentGrowth = skillEvents.slice(-4).reverse();
+  const accuracy = insights.predictionAccuracy;
+  const pct = (v: number) => `%${Math.round(v * 100)}`;
   const firstName = name.trim();
 
   return (
@@ -96,6 +110,43 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
               <div className="text-[11px] text-[#9FB0C3]">kavram</div>
             </div>
           </div>
+
+          {hasSkills && (
+            <div className="flex flex-col items-center gap-1 pt-1">
+              <SkillRadar skills={skills} />
+              <p className="text-[11px] text-[#9FB0C3] text-center">
+                Destek konu başına ayarlanır: kesikli iç çizgi gelişen, dış çizgi güçlü sınırı.
+              </p>
+            </div>
+          )}
+
+          {recentGrowth.length > 0 && (
+            <ul data-testid="skill-timeline" className="flex flex-col gap-1">
+              {recentGrowth.map((e, i) => (
+                <li key={`${e.date}-${i}`} className="flex items-center gap-2 text-[12px]">
+                  <span className={`font-mono font-bold w-8 ${e.delta > 0 ? 'text-[#7BC8A4]' : e.delta < 0 ? 'text-[#E58A7B]' : 'text-[#9FB0C3]'}`}>
+                    {e.delta > 0 ? `+${e.delta}` : e.delta}
+                  </span>
+                  <span className="text-[#9FB0C3] truncate">
+                    {topicLabel(e.topic)} · {e.reason}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {accuracy && (
+            <p data-testid="prediction-accuracy" className="text-[13px] text-[#E8EEF5] leading-relaxed">
+              <Target className="inline w-4 h-4 mr-1.5 text-[#7BC8A4] -mt-0.5" />
+              Tahmin isabetin: <strong className="text-[#7BC8A4]">{pct(accuracy.recent)}</strong>
+              {accuracy.earlier !== undefined && (
+                <span className="text-[#9FB0C3]">
+                  {' '}(önceki 5 tahmin {pct(accuracy.earlier)}
+                  {accuracy.recent > accuracy.earlier ? ', yükseliyor' : accuracy.recent < accuracy.earlier ? ', düşüyor' : ''})
+                </span>
+              )}
+            </p>
+          )}
 
           {insights.weakTopic && (
             <p data-testid="journal-weak-topic" className="text-[13px] text-[#E8EEF5] leading-relaxed">
@@ -302,6 +353,35 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
       <footer className="flex flex-col gap-3 mt-8 pt-2">
         {!isComplete && (
           <p className="text-center text-[12px] text-[#9FB0C3]">Başlamak için seviye, rol ve hedef seç.</p>
+        )}
+
+        {showNotebook && (
+          <button
+            type="button"
+            data-testid="intake-notebook"
+            onClick={onOpenNotebook}
+            className="w-full min-h-[52px] px-4 rounded-[14px] flex items-center gap-3 border bg-[#17263C] border-[#A7A3D9]/40 text-[#E8EEF5] text-left cursor-pointer hover:bg-[#1F3150]"
+          >
+            <BookOpen className="w-5 h-5 shrink-0 text-[#A7A3D9]" />
+            <span className="flex-1 flex flex-col">
+              <span className="font-mono text-[13px] font-bold">Defterim</span>
+              <span className="text-[12px] text-[#9FB0C3]">
+                {insights.dueReviews > 0
+                  ? `${insights.dueReviews} kavramın tekrar zamanı geldi`
+                  : insights.pendingExplanations.length > 0
+                  ? `${insights.pendingExplanations.length} kavram kendi kelimelerini bekliyor`
+                  : 'Tekrarların planlı'}
+              </span>
+            </span>
+            {insights.dueReviews + insights.pendingExplanations.length > 0 && (
+              <span
+                data-testid="notebook-badge"
+                className="min-w-[24px] h-6 px-1.5 rounded-full bg-[#A7A3D9] text-[#0F1B2D] font-mono text-[12px] font-bold flex items-center justify-center"
+              >
+                {insights.dueReviews + insights.pendingExplanations.length}
+              </span>
+            )}
+          </button>
         )}
 
         {/* Main mode: the player's own question */}

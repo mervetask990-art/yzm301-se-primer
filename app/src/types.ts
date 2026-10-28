@@ -1,3 +1,5 @@
+import type { TopicId } from './skills';
+
 export type LevelId = 'new' | 'mid' | 'senior';
 export type RoleId = 'backend' | 'frontend' | 'devops' | 'qa';
 export type GoalId = 'interview' | 'work' | 'curious';
@@ -14,6 +16,7 @@ export interface ChoiceData {
 export interface DecisionData {
   id: string;
   topic: string;
+  skillTopic: TopicId; // which skill-map topic this decision trains
   prompt: string;
   hint: string;
   tutorQuestion: string;
@@ -46,6 +49,7 @@ export interface ScenarioData {
   };
   decisions: DecisionData[];
   timeout: {
+    skillTopic: TopicId;
     defaultChoice: ChoiceId;
     what: string;
     why: string;

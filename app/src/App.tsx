@@ -5,7 +5,19 @@
 
 import { useEffect, useReducer, useRef, useState } from 'react';
 import scenarioData from './scenario.json';
-import { GameState, GameAction, ScenarioData, ChoiceId } from './types';
+import { GameState, GameAction, ScenarioData, ChoiceId, DecisionData, LevelId } from './types';
+import {
+  SkillEvent,
+  TopicId,
+  event as skillEvent,
+  newEntry,
+  scheduleAfterReview,
+  REVIEW_DELTA,
+  PREDICTION_DELTA,
+  tierFor,
+  timerSecondsFor,
+  topicLabel,
+} from './skills';
 import {
   Journal,
   RunRecord,
@@ -16,8 +28,11 @@ import {
   loadJournal,
   saveJournal,
   upsertPusula,
+  recordSkillEvents,
+  topicScore,
 } from './journal';
 import { PusulaFlow } from './components/PusulaFlow';
+import { NotebookScreen } from './components/NotebookScreen';
 import { IntakeScreen } from './components/IntakeScreen';
 import { IntroScreen } from './components/IntroScreen';
 import { DecisionScreen } from './components/DecisionScreen';
@@ -143,6 +158,61 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+// Research concepts of the crisis belong to the topic of the decision that produced them
+const CRISIS_CONCEPT_TOPICS: Record<string, TopicId> = (() => {
+  const map: Record<string, TopicId> = {};
+  for (const d of scenario.decisions) {
+    for (const c of Object.values(d.choices)) c.research.forEach((r) => (map[r] = d.skillTopic));
+    Object.values(d.combo ?? {}).forEach((c) => c.research.forEach((r) => (map[r] = d.skillTopic)));
+  }
+  scenario.timeout.research.forEach((r) => (map[r] = scenario.timeout.skillTopic));
+  return map;
+})();
+
+const LEVEL_RANK: Record<LevelId, number> = { new: 0, mid: 1, senior: 2 };
+
+function decisionSupport(journal: Journal, decision: DecisionData, chosenLevel: LevelId | null) {
+  const score = topicScore(journal, decision.skillTopic, chosenLevel);
+  const tier = tierFor(score);
+  const timerSeconds = timerSecondsFor(tier, score);
+  const label = topicLabel(decision.skillTopic);
+  let note: string | undefined;
+  if (chosenLevel && LEVEL_RANK[tier] > LEVEL_RANK[chosenLevel]) {
+    note = `${label} konusunda güçlendin (${score}/100): ${
+      tier === 'senior' ? `ipuçları kapandı, ${timerSeconds} saniyen var.` : 'ipucu artık isteğe bağlı.'
+    }`;
+  } else if (chosenLevel && LEVEL_RANK[tier] < LEVEL_RANK[chosenLevel]) {
+    note = `${label} konusunda zorlanıyorsun (${score}/100): ${
+      tier === 'new' ? 'ipucu açık, süre baskısı yok.' : 'süre baskısı kalktı, ipucu isteğe bağlı.'
+    }`;
+  } else if (timerSeconds !== null && timerSeconds < 60) {
+    note = `${label} konusunda çok güçlüsün (${score}/100): süre ${timerSeconds} saniyeye indi.`;
+  }
+  return { tier, timerSeconds, note };
+}
+
+// Evidence from one crisis run: careful choices raise the topic, risky ones and timeouts lower it
+function runEvents(state: GameState): SkillEvent[] {
+  const events: SkillEvent[] = [];
+  for (const d of scenario.decisions) {
+    const choice = state.choices[d.id];
+    if (!choice) continue;
+    if (state.timedOut[d.id]) {
+      events.push(skillEvent(d.skillTopic, -5, `${d.topic}: süre doldu`));
+      events.push(skillEvent(scenario.timeout.skillTopic, -2, 'Kriz anında kararsızlık'));
+    } else if (choice === 'A') {
+      const hinted = Boolean(state.revealedHints[d.id]);
+      events.push(skillEvent(d.skillTopic, hinted ? 5 : 8, `${d.topic}: ${d.choices.A.label}${hinted ? ' (ipucuyla)' : ''}`));
+    } else {
+      events.push(skillEvent(d.skillTopic, -3, `${d.topic}: ${d.choices.B.label}`));
+    }
+  }
+  if (state.choices['K1'] === 'B' && state.choices['K2'] === 'B') {
+    events.push(skillEvent('test', -2, 'Denenmemiş yama testsiz yayında'));
+  }
+  return events;
+}
+
 // Clock follows scenario.clockRule: startClock + minutes of decided choices (+ B+B combo)
 function calculateCurrentClock(state: GameState): string {
   const decidedCount =
@@ -175,11 +245,17 @@ export default function App() {
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [seniorTimeLeft, setSeniorTimeLeft] = useState<number | null>(null);
   const [pusulaOpen, setPusulaOpen] = useState(false);
+  const [notebookOpen, setNotebookOpen] = useState(false);
+  const [runSkillEvents, setRunSkillEvents] = useState<SkillEvent[]>([]);
   const savedRunIdRef = useRef<string | null>(null);
 
   const currentClock = calculateCurrentClock(state);
   const currentDecision = scenario.decisions[state.currentDecisionIndex];
   const insights = getInsights(journal, scenario);
+
+  // Fading support: each decision gets the support its topic's mastery calls for,
+  // not the single level the player picked at the start
+  const support = currentDecision ? decisionSupport(journal, currentDecision, state.level) : null;
 
   const updateJournal = (update: (j: Journal) => Journal) => {
     setJournal((prev) => {
@@ -203,30 +279,42 @@ export default function App() {
       timedOut: state.timedOut,
       ending: state.choices['K3'] === 'A' ? 'A' : 'B',
       clock: currentClock,
-      hintsUsed:
-        state.level === 'new'
-          ? scenario.decisions.length
-          : Object.values(state.revealedHints).filter(Boolean).length,
+      hintsUsed: Object.values(state.revealedHints).filter(Boolean).length,
       tutorMessages: state.tutorMessages,
       research: state.collectedResearch,
     };
     savedRunIdRef.current = run.id;
-    updateJournal((j) => ({ ...j, runs: [...j.runs, run].slice(-30) }));
+    const events = runEvents(state);
+    setRunSkillEvents(events);
+    updateJournal((j) =>
+      recordSkillEvents({ ...j, runs: [...j.runs, run].slice(-30) }, events, state.level),
+    );
   }, [state.step]);
 
   const restart = () => {
     savedRunIdRef.current = null;
     setSeniorTimeLeft(null);
+    setRunSkillEvents([]);
     dispatch({ type: 'RESTART' });
   };
 
-  const toggleResearched = (item: string) =>
-    updateJournal((j) => ({
-      ...j,
-      researched: j.researched.includes(item)
-        ? j.researched.filter((r) => r !== item)
-        : [...j.researched, item],
-    }));
+  // Marking a concept researched files it under a topic and nudges that topic's mastery
+  const toggleResearched = (item: string, topic?: TopicId) =>
+    updateJournal((j) => {
+      if (j.researched.includes(item)) {
+        return { ...j, researched: j.researched.filter((r) => r !== item) };
+      }
+      const t = topic ?? j.conceptTopics[item] ?? CRISIS_CONCEPT_TOPICS[item] ?? 'team';
+      return recordSkillEvents(
+        {
+          ...j,
+          researched: [...j.researched, item],
+          conceptTopics: { ...j.conceptTopics, [item]: t },
+        },
+        [skillEvent(t, 3, `Araştırdı: ${item}`)],
+        state.level,
+      );
+    });
 
   const saveReflection = (text: string) => {
     const runId = savedRunIdRef.current;
@@ -239,13 +327,65 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0F1B2D] text-[#E8EEF5] flex flex-col items-center">
       <div className="w-full max-w-[430px] flex flex-col flex-1 relative bg-[#0F1B2D]">
+        {/* Notebook: own-words explanations and spaced review */}
+        {notebookOpen && (
+          <NotebookScreen
+            entries={journal.notebook}
+            pending={insights.pendingExplanations.map((concept) => ({
+              concept,
+              topic: journal.conceptTopics[concept] ?? CRISIS_CONCEPT_TOPICS[concept] ?? 'team',
+            }))}
+            profile={{ level: state.level ?? 'mid', role: state.role ?? 'backend', goal: state.goal ?? 'work', name: journal.name }}
+            onAddEntry={(concept, topic, explanation) =>
+              updateJournal((j) =>
+                recordSkillEvents(
+                  { ...j, notebook: [...j.notebook.filter((e) => e.concept !== concept), newEntry(concept, topic, explanation)] },
+                  [skillEvent(topic, 4, `Kendi kelimeleriyle açıkladı: ${concept}`)],
+                  state.level,
+                ),
+              )
+            }
+            onReviewed={(concept, result, explanation) =>
+              updateJournal((j) => {
+                const entry = j.notebook.find((e) => e.concept === concept);
+                if (!entry) return j;
+                return recordSkillEvents(
+                  {
+                    ...j,
+                    notebook: j.notebook.map((e) => (e.concept === concept ? scheduleAfterReview(e, result, explanation) : e)),
+                  },
+                  [skillEvent(entry.topic, REVIEW_DELTA[result], `Tekrar (${result}): ${concept}`)],
+                  state.level,
+                );
+              })
+            }
+            onExit={() => setNotebookOpen(false)}
+          />
+        )}
+
         {/* Pusula: the player's own question, mapped into paths */}
         {pusulaOpen && state.level && state.role && state.goal && (
           <PusulaFlow
             profile={{ level: state.level, role: state.role, goal: state.goal, name: journal.name }}
             learner={learnerContext(journal, insights)}
             researched={journal.researched}
+            skills={journal.skills}
             onToggleResearched={toggleResearched}
+            onSkillEvents={(events) => updateJournal((j) => recordSkillEvents(j, events, state.level))}
+            onPrediction={(topic, alignment) =>
+              updateJournal((j) =>
+                recordSkillEvents(
+                  {
+                    ...j,
+                    predictions: [...j.predictions, { date: new Date().toISOString(), topic, alignment }].slice(-50),
+                  },
+                  PREDICTION_DELTA[alignment] > 0
+                    ? [skillEvent(topic, PREDICTION_DELTA[alignment], `Tahmin: ${alignment === 'close' ? 'yakın' : 'kısmen'}`)]
+                    : [],
+                  state.level,
+                ),
+              )
+            }
             onSaveRecord={(record) => updateJournal((j) => upsertPusula(j, record))}
             onUpdateReflection={(id, text) =>
               updateJournal((j) => ({
@@ -258,7 +398,7 @@ export default function App() {
         )}
 
         {/* Step 1: Intake */}
-        {!pusulaOpen && state.step === 'intake' && (
+        {!pusulaOpen && !notebookOpen && state.step === 'intake' && (
           <IntakeScreen
             scenario={scenario}
             level={state.level}
@@ -269,6 +409,9 @@ export default function App() {
             onSelectGoal={(g) => dispatch({ type: 'SET_GOAL', goal: g })}
             onStart={() => dispatch({ type: 'START_INTAKE' })}
             onStartPusula={() => setPusulaOpen(true)}
+            onOpenNotebook={() => setNotebookOpen(true)}
+            skills={journal.skills}
+            skillEvents={journal.skillEvents}
             name={journal.name}
             onNameChange={(name) => updateJournal((j) => ({ ...j, name }))}
             insights={insights}
@@ -296,18 +439,25 @@ export default function App() {
             <TopBar
               clock={currentClock}
               currentDecisionIndex={state.currentDecisionIndex}
-              isSenior={state.level === 'senior'}
+              isSenior={support?.timerSeconds != null}
               timeLeftSeconds={seniorTimeLeft}
+              totalTimeSeconds={support?.timerSeconds ?? 60}
             />
             <DecisionScreen
               decision={currentDecision}
               decisionNumber={state.currentDecisionIndex + 1}
-              level={state.level}
+              level={support?.tier ?? state.level}
+              timerSeconds={support?.timerSeconds ?? null}
+              supportNote={support?.note}
               revealedHint={Boolean(state.revealedHints[currentDecision.id])}
               onToggleHint={() =>
                 dispatch({ type: 'TOGGLE_HINT', decisionId: currentDecision.id })
               }
               onMakeChoice={(choice: ChoiceId, isTimeout?: boolean) => {
+                // An always-open hint counts as used support for this decision
+                if (support?.tier === 'new') {
+                  dispatch({ type: 'TOGGLE_HINT', decisionId: currentDecision.id });
+                }
                 dispatch({ type: 'MAKE_CHOICE', choice, isTimeout });
               }}
               onOpenTutor={() => setIsTutorOpen(true)}
@@ -350,6 +500,8 @@ export default function App() {
             viewAlternate={state.viewAlternateEnding}
             onToggleAlternate={() => dispatch({ type: 'TOGGLE_ALTERNATE_ENDING' })}
             onRestart={restart}
+            skillEvents={runSkillEvents}
+            skills={journal.skills}
             name={journal.name}
             runNumber={insights.runCount}
             researched={journal.researched}

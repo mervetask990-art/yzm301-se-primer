@@ -64,6 +64,9 @@ describe('Pusula — kendi sorunu sor', () => {
     cy.get(tid('pusula-path-details')).should('not.exist');
 
     cy.get(tid('pusula-path-toggle')).eq(1).click();
+    // Mid level: a prediction is offered first; this test skips it
+    cy.get(tid('pusula-predict')).should('be.visible');
+    cy.get(tid('pusula-reveal')).click();
     ['path-logic', 'path-leads-to', 'path-risk', 'path-when', 'path-self-question'].forEach((id) =>
       cy.get(tid(id)).should('be.visible').and('not.be.empty'),
     );
@@ -92,12 +95,15 @@ describe('Pusula — kendi sorunu sor', () => {
     cy.get(tid('pusula-path')).should('have.length', 3).last().should('contain', 'Önce tek bir modülü ayırırım');
 
     // Walk to depth 3 and finish
+    cy.get(tid('pusula-reveal')).click();
     cy.get(tid('pusula-choose')).click();
     cy.get(tid('pusula-situation')).should('contain', 'Karar noktası 2');
     cy.get(tid('pusula-path-toggle')).first().click();
+    cy.get(tid('pusula-reveal')).click();
     cy.get(tid('pusula-choose')).click();
     cy.get(tid('pusula-situation')).should('contain', 'Karar noktası 3');
     cy.get(tid('pusula-path-toggle')).first().click();
+    cy.get(tid('pusula-reveal')).click();
     cy.get(tid('pusula-choose')).should('contain', 'tamamla').click();
 
     cy.get(tid('pusula-summary')).should('be.visible');
@@ -107,6 +113,7 @@ describe('Pusula — kendi sorunu sor', () => {
     cy.get(tid('pusula-other-paths')).click();
     cy.get(tid('pusula-situation')).should('contain', 'Karar noktası 1');
     cy.get(tid('pusula-path-toggle')).first().click();
+    cy.get(tid('pusula-reveal')).click();
     cy.get(tid('pusula-choose')).click();
     cy.get(tid('pusula-trail')).should('contain', 'Yol 1A');
     cy.get(tid('pusula-trail-2')).should('not.exist');
@@ -134,19 +141,26 @@ describe('Pusula — kendi sorunu sor', () => {
   });
 });
 
-describe('Pusula — API anahtarı yokken (gerçek sunucu)', () => {
-  it('çevrimdışı örnek haritayla çalışmaya devam eder', () => {
+describe('Pusula — gerçek sunucu (anahtarlı, anahtarsız ya da model yoğunken)', () => {
+  it('her durumda bir harita göstererek çalışmaya devam eder', () => {
+    // Real Gemini (and its fallbacks) can take tens of seconds
+    const slow = { timeout: 120_000 };
     openPusula();
     cy.get(tid('pusula-question')).type('Dün çıkan sürümden sonra 500 hatası var.');
     cy.get(tid('pusula-ask')).click();
-    cy.get(tid('pusula-clarify-question')).should('have.length.at.least', 2);
+    cy.get(tid('pusula-clarify-question'), slow).should('have.length.at.least', 2);
     cy.get(tid('pusula-map-start')).click();
-    cy.get(tid('pusula-path')).should('have.length.at.least', 2);
+    cy.get(tid('pusula-path'), slow).should('have.length.at.least', 2);
     // Only assert the offline banner when the server truly has no key
-    cy.request('POST', '/api/pusula', { mode: 'clarify', question: 'deneme sorusu', profile: {} })
-      .its('body.offline')
-      .then((offline) => {
-        if (offline) cy.get(tid('pusula-offline')).should('be.visible');
+    cy.request({
+      method: 'POST',
+      url: '/api/pusula',
+      body: { mode: 'clarify', question: 'deneme sorusu', profile: {} },
+      timeout: 120_000,
+    })
+      .then((res) => {
+        // The banner must appear exactly when the server served the generic map (no key or all models busy)
+        if (res.body.offline) cy.get(tid('pusula-offline')).should('be.visible');
       });
   });
 });

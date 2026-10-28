@@ -5,7 +5,9 @@ import { DecisionData, ChoiceId, LevelId } from '../types';
 interface DecisionScreenProps {
   decision: DecisionData;
   decisionNumber: number; // 1, 2, 3
-  level: LevelId;
+  level: LevelId; // support tier for this decision's topic (from the skill map)
+  timerSeconds: number | null; // null = no time pressure
+  supportNote?: string; // explains why support changed for this topic
   revealedHint: boolean;
   onToggleHint: () => void;
   onMakeChoice: (choice: ChoiceId, isTimeout?: boolean) => void;
@@ -17,17 +19,19 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
   decision,
   decisionNumber,
   level,
+  timerSeconds,
+  supportNote,
   revealedHint,
   onToggleHint,
   onMakeChoice,
   onOpenTutor,
   onTimeUpdate,
 }) => {
-  const isSenior = level === 'senior';
+  const isSenior = timerSeconds !== null;
   const isMid = level === 'mid';
   const isNew = level === 'new';
 
-  // Senior 60-second countdown using Date.now() and setInterval as requested
+  // Countdown for strong topics, using Date.now() and setInterval so tests can control time
   const choiceMadeRef = useRef(false);
 
   // Parent passes new callback instances on every render; keep them in refs so the
@@ -39,11 +43,10 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
 
   useEffect(() => {
     choiceMadeRef.current = false;
-    if (!isSenior) return;
+    if (timerSeconds === null) return;
 
-    const durationMs = 60 * 1000;
-    const targetEndTime = Date.now() + durationMs;
-    onTimeUpdateRef.current?.(60);
+    const targetEndTime = Date.now() + timerSeconds * 1000;
+    onTimeUpdateRef.current?.(timerSeconds);
 
     const intervalId = setInterval(() => {
       if (choiceMadeRef.current) {
@@ -65,7 +68,7 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
     return () => {
       clearInterval(intervalId);
     };
-  }, [decision.id, isSenior]);
+  }, [decision.id, timerSeconds]);
 
   const handleSelectChoice = (choice: ChoiceId) => {
     if (choiceMadeRef.current) return;
@@ -117,6 +120,15 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
           <span className="text-[#E58A7B]">DB Pool: %98 Doygun</span>
         </div>
       </div>
+
+      {supportNote && (
+        <p
+          data-testid="support-note"
+          className="mb-4 px-3 py-2 rounded-xl bg-[#A7A3D9]/10 border border-[#A7A3D9]/25 text-[12px] text-[#A7A3D9] leading-relaxed"
+        >
+          {supportNote}
+        </p>
+      )}
 
       {/* Hint Area (Level-dependent) */}
       {/* Mid Level Toggle Button */}
