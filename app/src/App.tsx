@@ -15,7 +15,9 @@ import {
   learnerContext,
   loadJournal,
   saveJournal,
+  upsertPusula,
 } from './journal';
+import { PusulaFlow } from './components/PusulaFlow';
 import { IntakeScreen } from './components/IntakeScreen';
 import { IntroScreen } from './components/IntroScreen';
 import { DecisionScreen } from './components/DecisionScreen';
@@ -172,6 +174,7 @@ export default function App() {
   const [state, dispatch] = useReducer(gameReducer, journal, initFromJournal);
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [seniorTimeLeft, setSeniorTimeLeft] = useState<number | null>(null);
+  const [pusulaOpen, setPusulaOpen] = useState(false);
   const savedRunIdRef = useRef<string | null>(null);
 
   const currentClock = calculateCurrentClock(state);
@@ -236,8 +239,26 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#0F1B2D] text-[#E8EEF5] flex flex-col items-center">
       <div className="w-full max-w-[430px] flex flex-col flex-1 relative bg-[#0F1B2D]">
+        {/* Pusula: the player's own question, mapped into paths */}
+        {pusulaOpen && state.level && state.role && state.goal && (
+          <PusulaFlow
+            profile={{ level: state.level, role: state.role, goal: state.goal, name: journal.name }}
+            learner={learnerContext(journal, insights)}
+            researched={journal.researched}
+            onToggleResearched={toggleResearched}
+            onSaveRecord={(record) => updateJournal((j) => upsertPusula(j, record))}
+            onUpdateReflection={(id, text) =>
+              updateJournal((j) => ({
+                ...j,
+                pusula: j.pusula.map((p) => (p.id === id ? { ...p, reflection: text.trim() } : p)),
+              }))
+            }
+            onExit={() => setPusulaOpen(false)}
+          />
+        )}
+
         {/* Step 1: Intake */}
-        {state.step === 'intake' && (
+        {!pusulaOpen && state.step === 'intake' && (
           <IntakeScreen
             scenario={scenario}
             level={state.level}
@@ -247,6 +268,7 @@ export default function App() {
             onSelectRole={(r) => dispatch({ type: 'SET_ROLE', role: r })}
             onSelectGoal={(g) => dispatch({ type: 'SET_GOAL', goal: g })}
             onStart={() => dispatch({ type: 'START_INTAKE' })}
+            onStartPusula={() => setPusulaOpen(true)}
             name={journal.name}
             onNameChange={(name) => updateJournal((j) => ({ ...j, name }))}
             insights={insights}

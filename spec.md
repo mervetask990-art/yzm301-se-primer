@@ -10,6 +10,10 @@ Mevcut kaynaklar (ders kitabı, video, sohbet botu) ya cevabı verir ya da bağl
 
 **SE Primer**, öğrenciyi gerçekçi bir sağlık sistemi krizine koyar, her kararın sonucunu "ne oldu / neden oldu" olarak gösterir ve bir sonraki adımda **ne araştırması gerektiğini** söyler. AI tutor cevap vermez; Sokratik sorular sorar.
 
+Uygulamanın iki modu vardır:
+- **Pusula (ana mod):** Öğrenci kendi sorusunu veya krizini yazar. Pusula cevap vermez; önce netleştirme soruları sorar, sonra **yol haritası** çıkarır: her yolun hangi mantıkla seçildiğini, o yoldan gidilirse nereye varılacağını, riskini ve hangi koşulda anlamlı olduğunu gösterir. Öğrenci bir yol seçtikçe harita derinleşir; geri dönüp başka dalı deneyebilir.
+- **Örnek kriz:** Ödevin istediği sabit senaryo (08:00 randevu sistemi çöktü, 3 karar, 2 son). Pusula'nın mantığını hazır bir örnekle öğretir.
+
 ### Hedef kullanıcı
 Yazılım mühendisliği öğrencisi veya yeni mezun; telefonda, 5–10 dakikalık bir oturumda oynar.
 
@@ -23,6 +27,7 @@ Yazılım mühendisliği öğrencisi veya yeni mezun; telefonda, 5–10 dakikal�
 | Her seçimden sonra: ne oldu, neden oldu, ne araştırmalısın | Native mobil uygulama (iOS/Android) |
 | AI tutor: ipucu verir, cevabı vermez | Bulut senkronizasyonu, puan tablosu, çok oyunculu mod |
 | Cihazda kalan öğrenme günlüğü: geçmiş nöbetler, araştırılan kavramlar, tek cümlelik notlar | |
+| Pusula: oyuncunun kendi sorusu için en fazla 3 karar noktalı yol haritası | Pusula'nın "doğru yolu" işaretlemesi veya çözüm yazması |
 
 ## 3. Kişiselleştirme kuralları
 
@@ -49,6 +54,32 @@ Primer oyuncuyla birlikte öğrenir: her nöbet bittiğinde tarayıcıda (localS
 | Son profil (seviye, rol, hedef) | Bir sonraki girişte önceden seçili gelir |
 
 Günlük "Günlüğü sıfırla" ile silinir; tarayıcı depolaması kapalıysa oyun günlüksüz çalışmaya devam eder.
+
+## 3b. Pusula akışı
+
+```mermaid
+stateDiagram-v2
+    [*] --> Profil: seviye, rol, hedef, ad
+    Profil --> Soru: "Kendi sorunu sor"
+    Soru --> Netlestirme: 2-3 soru (boş bırakılabilir)
+    Netlestirme --> Harita: Karar noktası 1, 2-3 yol
+    Harita --> Harita: Yol seç → bir sonraki karar noktası (en fazla 3)
+    Harita --> Harita: Kendi yolunu ekle → aynı biçimde analiz
+    Harita --> Harita: İz çubuğundan geri dön → farklı dal
+    Harita --> Ozet: 3. noktada seçim veya "burada bitir"
+    Ozet --> Harita: "Başka bir senaryodan geçseydin?"
+    Ozet --> Soru: Yeni soru
+```
+
+**Her yolun alanları:** `title` (yaklaşım), `logic` (hangi mantıkla), `leadsTo` (bu yoldan gidersen), `risk`, `whenItFits` (ne zaman anlamlı), `research` (2-3 kavram adı), `selfQuestion` (kendine sor).
+
+**Cevap vermeme kuralı iki katmanlıdır:**
+1. Sistem talimatı: "doğru / en iyi / önerilen" yolu söyleme yasağı, yolları eşit ciddiyetle anlatma zorunluluğu.
+2. Sunucu denetimi (`app/src/pusula/model.ts`, `neutralize`): "bence", "önerim", "en doğrusu", "-malısın/-melisin" gibi yönlendiren cümleler yanıttan çıkarılır.
+
+**Kişiselleştirme:** Yeni başlayana ilk yol açık gelir ve "Doğru yol yok; sana uyan koşul var" ipucu gösterilir; diğer seviyelerde yollar kapalı gelir. Seviye, rol, hedef, araştırılan kavramlar ve önceki sorular modele bağlam olarak gider.
+
+**Anahtar yoksa:** Sunucu genel bir düşünme iskeleti döner (`offline: true`) ve arayüz bunu açıkça söyler; uygulama çalışmaya devam eder.
 
 ## 4. Akış şeması (durum makinesi)
 
@@ -114,7 +145,12 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 - *When* uygulamayı yeniden açar
 - *Then* profil önceden seçilidir, "Öğrenme yolculuğun" kartı notunu ve en çok risk aldığı kararı gösterir, giriş sahnesi adıyla selamlar ve tutor isteği adı, nöbet sayısını, araştırılan kavramları ve notu `learner` alanında taşır.
 
-> **Not:** Bir arkadaşa oynatıldığında ilk takılınan yer buraya **KÖ-7** olarak eklenecek.
+**KÖ-7 · Pusula cevap vermeden yol gösterir**
+- *Given* oyuncu Pusula'ya "Canlıda sorgular yavaşladı, ne yapmalıyım?" yazdı ve netleştirme sorularından birini cevapladı
+- *When* bir yolu açar ve "Bu yoldan ilerle"ye basar
+- *Then* yol kartında mantık, varış, risk, koşul ve "kendine sor" alanları görünür, hiçbir kart "önerilen" veya "doğru yol" diye işaretlenmez, bir sonraki karar noktası şimdiye kadarki seçimler (`trail`) bağlamıyla istenir ve oyuncu iz çubuğundan önceki noktaya dönüp başka bir dal seçebilir.
+
+> **Not:** Bir arkadaşa oynatıldığında ilk takılınan yer buraya **KÖ-8** olarak eklenecek.
 
 ## 6. İzlenebilirlik
 
@@ -126,6 +162,7 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 | KÖ-4 | `KÖ-4 tutor paneli soru ile yanıt verir` (mock) | `eval/tutor-eval.csv` (gerçek model, 20 cevap) |
 | KÖ-5 | `8 yol` (her adımda üç kart kontrolü) | — |
 | KÖ-6 | `KÖ-6 ikinci nöbette geçmişi hatırlar ve kişiselleştirir` | — |
+| KÖ-7 | `cypress/e2e/pusula.cy.ts`: `KÖ-7 ...`, `oyuncunun kendi yolunu ekler...`, `çevrimdışı örnek harita...` | Pusula yanıtlarında yönlendirme oranı (isteğe bağlı, `eval/README.md`) |
 
 KÖ-4 Cypress'te mock ile yalnızca **arayüzü** test eder; tutor'un gerçek davranışı **eval** ile ölçülür.
 

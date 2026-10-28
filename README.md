@@ -2,7 +2,9 @@
 
 **Yazılım mühendisliği, oynanan bir kitap.** Her seçim bir durum geçişi, her son bir kabul kriteri.
 
-Oyuncu 08:00'de çöken bir hastane randevu sisteminin nöbetçi mühendisidir. Üç karar verir (mimari, test, KVKK); uygulama her kararın teknik sonucunu gösterir ve **cevabı değil, araştırılacak kavramları** verir. AI tutor ipucu verir, cevabı vermez.
+**Pusula (ana mod):** Kendi sorunu veya krizini yaz ("Canlıda sorgular yavaşladı", "Mikroservise geçmeli miyiz?"). Pusula cevap vermez: önce seni anlamak için soru sorar, sonra yol haritası çıkarır. Her yol için **hangi mantıkla** seçildiğini, **o yoldan gidersen nereye varacağını**, riskini ve **hangi koşulda anlamlı olduğunu** gösterir. Bir yol seçtikçe harita derinleşir; geri dönüp "başka bir senaryodan geçseydim?" diye diğer dalı deneyebilir, kendi yolunu ekleyip aynı biçimde analiz ettirebilirsin. Sonunda cevabı sen yazarsın.
+
+**Örnek kriz:** Oyuncu 08:00'de çöken bir hastane randevu sisteminin nöbetçi mühendisidir. Üç karar verir (mimari, test, KVKK); uygulama her kararın teknik sonucunu gösterir ve **cevabı değil, araştırılacak kavramları** verir. AI tutor ipucu verir, cevabı vermez.
 
 **Seninle birlikte öğrenir:** Her nöbet cihazdaki bir öğrenme günlüğüne yazılır. Bir sonraki nöbette Primer seni adınla karşılar, en çok risk aldığın kararı ve sıradaki araştırmanı hatırlatır, hazırsan seviye atlamayı önerir; tutor da araştırdığın kavramlar ve kendi notun üzerinden soru sorar.
 
@@ -23,7 +25,9 @@ Oyuncu 08:00'de çöken bir hastane randevu sisteminin nöbetçi mühendisidir. 
 | [prompts/stitch.md](prompts/stitch.md) | Stitch'e verilen prompt'lar |
 | [prompts/ai-studio.md](prompts/ai-studio.md) | AI Studio Build prompt'u + tutor sistem prompt'u |
 | [eval/](eval/) | Tutor eval: 20 cevap, hata türleri, oranlar |
-| [cypress/e2e/paths.cy.ts](cypress/e2e/paths.cy.ts) | 8 yol + kişiselleştirme + tutor + öğrenme günlüğü E2E testleri (14 test) |
+| [cypress/e2e/paths.cy.ts](cypress/e2e/paths.cy.ts) | Örnek kriz: 8 yol + kişiselleştirme + tutor + öğrenme günlüğü (14 test) |
+| [cypress/e2e/pusula.cy.ts](cypress/e2e/pusula.cy.ts) | Pusula: netleştirme, harita, kendi yolu, geri dönüp dal değiştirme, çevrimdışı mod (4 test) |
+| [app/src/pusula/model.ts](app/src/pusula/model.ts) | Pusula veri modeli, JSON şemaları, yönlendirme denetimi, çevrimdışı harita |
 | `app/` | AI Studio'dan dışa aktarılan, düzeltilip geliştirilen uygulama kodu |
 
 ## AI Studio çıktısında yapılan düzeltmeler

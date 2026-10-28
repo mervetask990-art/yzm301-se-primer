@@ -59,4 +59,8 @@ Satırlar 6 kategoriden gelir: doğrudan cevap isteme (4), ısrar / rol yapma (4
 - Sistem prompt'una ne ekledin (bkz. `prompts/ai-studio.md`, "Düzeltme prompt'ları")?
 - Düzeltmeden sonra yalnızca kırılan satırları tekrar koştur ve "önce → sonra" oranını yaz.
 
+## Pusula eval (isteğe bağlı)
+
+Aynı yöntemi Pusula'ya da uygulayabilirsin: 10 farklı soru yaz (5 gerçekçi kriz, 3 "sadece cevabı söyle" ısrarı, 2 konu dışı). Her haritada şunları say: kaç yol "önerilen/doğru" gibi işaretlendi, kaç `whenItFits` gerçekten bir koşul içeriyor, kaç `selfQuestion` soru işaretiyle bitiyor. Sunucu logundaki `Pusula: directive language removed` satırları, denetimin kaç kez devreye girdiğini gösterir.
+
 **Sınırlılık:** 20 örnek küçük bir örneklem; tek etiketleyici olduğu için öznel. Oranlar yön gösterir, kesin sonuç değildir.

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Terminal, Server, Flag, CheckCircle2, ArrowRight, BookMarked, User, TrendingUp, Search } from 'lucide-react';
+import { Terminal, Server, Flag, CheckCircle2, ArrowRight, BookMarked, User, TrendingUp, Search, Compass, Siren } from 'lucide-react';
 import { LanternLogo } from './LanternLogo';
 import { LevelId, RoleId, GoalId, ScenarioData } from '../types';
 import { Insights, levelLabel } from '../journal';
@@ -13,6 +13,7 @@ interface IntakeScreenProps {
   onSelectRole: (role: RoleId) => void;
   onSelectGoal: (goal: GoalId) => void;
   onStart: () => void;
+  onStartPusula: () => void;
   name: string;
   onNameChange: (name: string) => void;
   insights: Insights;
@@ -28,13 +29,14 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
   onSelectRole,
   onSelectGoal,
   onStart,
+  onStartPusula,
   name,
   onNameChange,
   insights,
   onResetJournal,
 }) => {
   const isComplete = Boolean(level && role && goal);
-  const isReturning = insights.runCount > 0;
+  const isReturning = insights.runCount > 0 || insights.pusulaCount > 0;
   const firstName = name.trim();
 
   return (
@@ -84,8 +86,10 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
               <div className="text-[11px] text-[#9FB0C3]">nöbet</div>
             </div>
             <div className="rounded-xl bg-[#101C2E] border border-[#2A3E5C] py-2">
-              <div className="font-mono text-lg font-bold text-[#7BC8A4]">{insights.goodEndings}</div>
-              <div className="text-[11px] text-[#9FB0C3]">iyi son</div>
+              <div data-testid="journal-pusula-count" className="font-mono text-lg font-bold text-[#7BC8A4]">
+                {insights.pusulaCount}
+              </div>
+              <div className="text-[11px] text-[#9FB0C3]">harita</div>
             </div>
             <div className="rounded-xl bg-[#101C2E] border border-[#2A3E5C] py-2">
               <div className="font-mono text-lg font-bold text-[#A7A3D9]">{insights.researchedCount}</div>
@@ -117,6 +121,13 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
               {insights.suggestionReason}{' '}
               <span className="font-mono text-[#5FB3A8]">→ {levelLabel(scenario, insights.suggestedLevel)}</span>
             </button>
+          )}
+
+          {insights.lastPusula && (
+            <p data-testid="journal-last-question" className="text-[12px] text-[#9FB0C3] leading-relaxed">
+              Son sorduğun: <span className="text-[#E8EEF5]">“{insights.lastPusula.question}”</span>
+              {insights.lastPusula.reflection && <> · Kendi cevabın: “{insights.lastPusula.reflection}”</>}
+            </p>
           )}
 
           {insights.lastRun?.reflection && (
@@ -289,19 +300,48 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
 
       {/* Bottom Sticky Action Area */}
       <footer className="flex flex-col gap-3 mt-8 pt-2">
+        {!isComplete && (
+          <p className="text-center text-[12px] text-[#9FB0C3]">Başlamak için seviye, rol ve hedef seç.</p>
+        )}
+
+        {/* Main mode: the player's own question */}
         <button
           type="button"
-          data-testid="intake-start"
+          data-testid="intake-pusula"
           disabled={!isComplete}
-          onClick={onStart}
-          className={`w-full min-h-[48px] h-[52px] rounded-[14px] font-mono text-[14px] font-bold flex items-center justify-center gap-2 border transition-all ${
+          onClick={onStartPusula}
+          className={`w-full min-h-[64px] px-4 rounded-[14px] flex items-center gap-3 border text-left transition-all ${
             isComplete
               ? 'bg-[#5FB3A8] text-[#0F1B2D] border-[#5FB3A8] cursor-pointer hover:bg-[#529F95] active:scale-95'
               : 'bg-[#17263C] text-[#9FB0C3]/50 border-[#2A3E5C] cursor-not-allowed opacity-60'
           }`}
         >
-          <span>Nöbete başla</span>
-          <ArrowRight className="w-5 h-5" />
+          <Compass className="w-6 h-6 shrink-0" />
+          <span className="flex-1 flex flex-col">
+            <span className="font-mono text-[14px] font-bold">Kendi sorunu sor</span>
+            <span className="text-[12px] opacity-80">Pusula cevap vermez, yollarını gösterir</span>
+          </span>
+          <ArrowRight className="w-5 h-5 shrink-0" />
+        </button>
+
+        {/* Example scenario required by the assignment */}
+        <button
+          type="button"
+          data-testid="intake-start"
+          disabled={!isComplete}
+          onClick={onStart}
+          className={`w-full min-h-[56px] px-4 rounded-[14px] flex items-center gap-3 border text-left transition-all ${
+            isComplete
+              ? 'bg-[#17263C] text-[#E8EEF5] border-[#2A3E5C] cursor-pointer hover:bg-[#1F3150] hover:border-[#F2B266]/50 active:scale-95'
+              : 'bg-[#17263C] text-[#9FB0C3]/50 border-[#2A3E5C] cursor-not-allowed opacity-60'
+          }`}
+        >
+          <Siren className="w-5 h-5 shrink-0 text-[#F2B266]" />
+          <span className="flex-1 flex flex-col">
+            <span className="font-mono text-[13px] font-bold">Örnek krizi oyna</span>
+            <span className="text-[12px] text-[#9FB0C3]">08:00, randevu sistemi çöktü · 3 karar</span>
+          </span>
+          <ArrowRight className="w-5 h-5 shrink-0 text-[#9FB0C3]" />
         </button>
 
         <div className="flex flex-col items-center justify-center gap-1 text-center mt-1">

@@ -19,13 +19,24 @@ export interface RunRecord {
   reflection?: string;
 }
 
+// One Pusula session: the player's own question and the paths they walked through
+export interface PusulaRecord {
+  id: string;
+  date: string; // ISO
+  question: string;
+  trail: string[]; // titles of chosen paths, in order
+  research: string[];
+  reflection?: string;
+}
+
 export interface Journal {
   name: string;
   runs: RunRecord[];
   researched: string[]; // concepts the player marked as researched
+  pusula: PusulaRecord[];
 }
 
-export const emptyJournal: Journal = { name: '', runs: [], researched: [] };
+export const emptyJournal: Journal = { name: '', runs: [], researched: [], pusula: [] };
 
 export function loadJournal(): Journal {
   try {
@@ -36,6 +47,7 @@ export function loadJournal(): Journal {
       name: typeof parsed.name === 'string' ? parsed.name : '',
       runs: Array.isArray(parsed.runs) ? parsed.runs : [],
       researched: Array.isArray(parsed.researched) ? parsed.researched : [],
+      pusula: Array.isArray(parsed.pusula) ? parsed.pusula : [],
     };
   } catch {
     return emptyJournal;
@@ -62,6 +74,8 @@ export interface Insights {
   runCount: number;
   goodEndings: number;
   researchedCount: number;
+  pusulaCount: number;
+  lastPusula?: PusulaRecord;
   lastRun?: RunRecord;
   weakTopic?: string; // decision topic where the player most often took the risky path
   nextResearch?: string; // first concept from the last run that is not researched yet
@@ -78,9 +92,15 @@ export function getInsights(journal: Journal, scenario: ScenarioData): Insights 
     runCount: runs.length,
     goodEndings: runs.filter((r) => r.ending === 'A').length,
     researchedCount: journal.researched.length,
+    pusulaCount: journal.pusula.length,
+    lastPusula: journal.pusula[journal.pusula.length - 1],
     lastRun,
   };
-  if (!lastRun) return insights;
+  if (!lastRun) {
+    // Pusula-only players still get a "next research" suggestion
+    insights.nextResearch = insights.lastPusula?.research.find((item) => !journal.researched.includes(item));
+    return insights;
+  }
 
   // Weak topic: count risky (B) or timed-out decisions over the last 5 runs
   const recent = runs.slice(-5);
@@ -122,8 +142,16 @@ export function learnerContext(journal: Journal, insights: Insights) {
     runCount: insights.runCount,
     researched: journal.researched.slice(-8),
     weakTopic: insights.weakTopic,
-    lastReflection: insights.lastRun?.reflection,
+    lastReflection: insights.lastRun?.reflection ?? insights.lastPusula?.reflection,
+    recentQuestions: journal.pusula.slice(-3).map((p) => p.question),
   };
+}
+
+export function upsertPusula(journal: Journal, record: PusulaRecord): Journal {
+  const existing = journal.pusula.find((p) => p.id === record.id);
+  const merged = existing ? { ...record, reflection: existing.reflection } : record;
+  const others = journal.pusula.filter((p) => p.id !== record.id);
+  return { ...journal, pusula: [...others, merged].slice(-20) };
 }
 
 export const levelLabel = (scenario: ScenarioData, id: LevelId) =>
