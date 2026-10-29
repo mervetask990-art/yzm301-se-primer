@@ -13,7 +13,7 @@
 | | Link |
 |---|---|
 | Çalışan uygulama (AI Studio) | [ai.studio/apps/d17850a4-…](https://ai.studio/apps/d17850a4-60ef-4c0a-9474-516a887f8330?fullscreenApplet=true) |
-| Demo video (60 sn, Cypress) | `<video linki>` |
+| Demo video (60 sn, Cypress) | [youtu.be/c8XlkiVAW4g](https://youtu.be/c8XlkiVAW4g) |
 | Repo | [github.com/mervetask990-art/yzm301-se-primer](https://github.com/mervetask990-art/yzm301-se-primer) |
 
 ## İçerik
