@@ -43,9 +43,11 @@ const ai = new GoogleGenAI({
 // others hit "high demand" / deadline errors, and free-tier keys run out of per-model quota (429),
 // so calls fall back through GEMINI_FALLBACK_MODELS; lite models keep separate quota and answer fast.
 // Set GEMINI_FALLBACK_MODELS="" to pin a single model (e.g. while running the eval).
-const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.6-flash';
+// gemini-3.5-flash-lite is the main model: fastest in our checks, separate free-tier quota, and the
+// model the tutor eval measured (eval/README.md).
+const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 const GEMINI_FALLBACK_MODELS = (
-  process.env.GEMINI_FALLBACK_MODELS ?? 'gemini-3.5-flash,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-flash-lite-latest'
+  process.env.GEMINI_FALLBACK_MODELS ?? 'gemini-flash-lite-latest,gemini-3.6-flash,gemini-2.5-flash'
 )
   .split(',')
   .map((m) => m.trim())
