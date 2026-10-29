@@ -22,7 +22,7 @@ Yazılım mühendisliği öğrencisi veya yeni mezun; telefonda, 5–10 dakikal�
 | Kapsamda | Kapsam dışı |
 |---|---|
 | Telefonda açılan web uygulaması (AI Studio linki) | Kullanıcı hesabı, giriş |
-| Girişte 3 soru: seviye, rol, hedef; anlatı buna uyar | İkinci bölüm / ikinci senaryo |
+| Girişte 3 soru: seviye, rol, hedef; anlatı buna uyar | İkinci bölüm / ikinci sabit senaryo (Pusula senaryo değil, araçtır: hikâye, son veya "doğru yol" üretmez; bkz. §3b) |
 | 1 sağlık senaryosu, 3 karar, 2 farklı son | Gerçek hasta verisi (tüm veriler kurgusaldır) |
 | Her seçimden sonra: ne oldu, neden oldu, ne araştırmalısın | Native mobil uygulama (iOS/Android) |
 | AI tutor: ipucu verir, cevabı vermez | Bulut senkronizasyonu, puan tablosu, çok oyunculu mod |

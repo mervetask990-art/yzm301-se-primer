@@ -69,7 +69,9 @@ Uygulama 3000 dışında bir portta açılırsa: `CYPRESS_BASE_URL=http://localh
 
 1. **Kullanıcı hesabı ve bulut senkronizasyonu** — Öğrenme günlüğü cihazda tutuluyor; giriş ekranı, öğrenme anına gelmeden oyuncuyu kaybettirir ve sağlık temalı bir uygulamada gereksiz kişisel veri toplar.
 2. **Tutor'un doğru cevabı en sonda açıklaması** — Cevabı vermek, oyuncunun araştırma noktalarını kendi başına kovalama motivasyonunu öldürür; ürünün tek farkı budur.
-3. **İkinci senaryo** — Tek senaryonun 8 yolunu test ve eval ile sağlamlaştırmak, yarım test edilmiş iki senaryodan daha değerlidir.
+3. **Zayıf konuya göre otomatik kriz üreteci** — Yapay zekânın ürettiği senaryoların doğruluğu ve iki sonunun adil olup olmadığı eval edilmeden öğrenciye sunulamaz; elle yazılmış, 8 yolu test edilmiş tek senaryo daha güvenilirdir.
+
+**Pusula neden ikinci bir senaryo değil:** Ödev ikinci bölümü kapsam dışı tutuyor ve SE Primer'da hâlâ tek bir sabit senaryo var (08:00 randevu krizi). Pusula sabit bir hikâye, puanlanan son ya da "doğru yol" üretmez. Örnek krizde öğretilen düşünme biçimini (mantık → varış → risk → koşul → araştır) öğrencinin kendi sorusuna uygular, cevabı yine öğrenciye bırakır. Bu yüzden ayrı bir eval ve Cypress testleriyle (KÖ-7, KÖ-9) sınırları belirlenmiş bir **araç** olarak eklendi; senaryo kapsamı genişletilmedi.
 
 ## Kaynaklar
 
