@@ -202,6 +202,21 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 
 > **Not:** Bir arkadaşa oynatıldığında ilk takılınan yer buraya **KÖ-11** olarak eklenecek.
 
+**KÖ-12 · Zorlanması beklenen oyuncuya model destek açar**
+- *Given* oyuncu "Deneyimliyim" seçti (kurala göre K2'de ipucu yok, 60 sn sayaç var); K1'de 40 sn düşündü, A ile B arasında 4 kez gidip geldi ve B'yi seçti
+- *When* K2 sahnesi açılır
+- *Then* model olasılığı (`data-cy="p"`) karar eşiğinin (0.50) üstündedir; sayaç **yoktur**, ipucu kartı (`hint-card`) açıktır ve "Destek açıldı" notu (`model-support-note`) nedenini yazar.
+
+**KÖ-13 · Zorlanması beklenmeyen oyuncuda kurallar aynen çalışır**
+- *Given* aynı profil; K1'de 8 sn içinde, gidip gelmeden A'yı seçti
+- *When* K2 sahnesi açılır
+- *Then* olasılık eşiğin altındadır; 60 sn sayaç görünür, ipucu kartı ve `model-support-note` yoktur (v1 davranışı değişmez).
+
+**KÖ-14 · Uygulama ile Python aynı olasılığı verir (diferansiyel test)**
+- *Given* `tests/parite.json` içindeki 5 referans girdi ve Python'un (`onnxruntime`, test kahini) verdiği olasılıklar
+- *When* uygulama aynı `model.onnx` ile bu girdileri tarayıcıda (`onnxruntime-web`) çalıştırır
+- *Then* her girdi için `|p_uygulama − p_python| < 1e-4`'tür; model yüklenemezse oyun v1 kurallarıyla oynanabilir kalır ve `data-cy="p"` "—" gösterir.
+
 ## 6. İzlenebilirlik
 
 | Kabul örneği | Cypress testi (`cypress/e2e/paths.cy.ts`) | Eval |
@@ -217,6 +232,9 @@ Her örnek Given / When / Then formatındadır ve bir Cypress testine bağlıdı
 | KÖ-10 | `cypress/e2e/growth.cy.ts`: `KÖ-10 ...` | — |
 | KÖ-7 | `cypress/e2e/pusula.cy.ts`: `KÖ-7 ...`, `oyuncunun kendi yolunu ekler...`, `çevrimdışı örnek harita...` | Pusula yanıtlarında yönlendirme oranı (isteğe bağlı, `eval/README.md`) |
 
+| KÖ-12, KÖ-13 | `cypress/e2e/model.cy.ts`: `KÖ-12 ...`, `KÖ-13 ...` | `train.py` eval kapısı (§8) |
+| KÖ-14 | `cypress/e2e/model.cy.ts`: `KÖ-14 parite ...` | `tests/parite.py` (Python test kahini) |
+
 KÖ-4 Cypress'te mock ile yalnızca **arayüzü** test eder; tutor'un gerçek davranışı **eval** ile ölçülür.
 
 ## 7. Teknik notlar
@@ -227,3 +245,56 @@ KÖ-4 Cypress'te mock ile yalnızca **arayüzü** test eder; tutor'un gerçek da
 - **Günlük:** `app/src/journal.ts`, anahtar `se-primer-journal-v1`, en fazla 30 nöbet.
 - **Test edilebilirlik:** Tüm etkileşimli öğelerde `data-testid` (liste: `prompts/ai-studio.md`; günlük için ek: `intake-name`, `journal-card`, `journal-weak-topic`, `journal-next-research`, `level-suggestion`, `journal-reset`, `intro-greeting`, `intro-memory`, `ending-run-number`, `research-item`, `research-progress`, `reflection-input`, `reflection-save`).
 - **Veri:** Tüm hasta bilgileri kurgusaldır. Oyuncunun adı ve günlüğü yalnızca kendi tarayıcısında durur; tutor'a sadece ad, nöbet sayısı, son 8 araştırılan kavram, zayıf konu ve son not gider.
+
+## 8. Model gereksinimi (v2): zorlanma tahmini
+
+> Bu bölüm **eğitimden önce** yazıldı ve ayrı bir commit'le sabitlendi. Eşiği geçmeyen model yayınlanmaz; eşik sonradan modele göre gevşetilmez.
+
+### 8.1 Problem
+
+v1'de destek (ipucu, sayaç) yalnızca **konu puanına** bakan sabit kurallarla ayarlanıyor (§3). Konu puanı geçmişi ölçer, **şu anki davranışı** ölçmez: deneyimli bir oyuncu bu nöbette uzun uzun tereddüt edip A ile B arasında gidip geliyorsa kural yine 60 sn sayaç açar. v2'de küçük bir model, oyuncunun bu nöbetteki davranışından **sıradaki kararda zorlanıp zorlanmayacağını** tahmin eder.
+
+**Soru:** "Bu oyuncu sıradaki kararda zorlanacak mı?"
+**Zorlanma (etiket, `zorlandi`):** Kararda riskli seçeneği (B) seçmek **veya** süreyi doldurmak. Etiket oyunun kendisinden çıkar; elle etiketleme yoktur.
+
+### 8.2 Girdiler (kararın başında bilinenler)
+
+Tahmin her kararın **başında** yapılır; kararın kendi süresi gibi sonradan bilinen hiçbir bilgi girdi olamaz (veri sızıntısı). Tam tanımlar ve birimler: `data/SOZLUK.md`.
+
+| # | Özellik | Birim |
+|---|---|---|
+| 1 | `karar_no` | 1–3 |
+| 2 | `konu_puani` | 0–100, kararın konusundaki beceri puanı |
+| 3 | `sure_baskisi` | 0/1, kurala göre sayaç açık mı |
+| 4 | `onceki_karar_suresi_sn` | saniye, bu nöbette bir önceki kararda geçen süre (K1'de 0) |
+| 5 | `onceki_gidip_gelme` | adet, önceki kararda A↔B arasında imleç/parmak geçişi (K1'de 0) |
+| 6 | `onceki_riskli_sayisi` | adet, bu nöbette şimdiye kadarki B / süre aşımı |
+| 7 | `ipucu_sayisi` | adet, bu nöbette şimdiye kadar açılan ipucu |
+| 8 | `tutor_mesaj_sayisi` | adet, bu nöbette tutor'a gönderilen soru |
+| 9 | `gecmis_riskli_oran` | 0–1, önceki nöbetlerdeki riskli karar oranı (ilk nöbette 0) |
+
+Kişisel veri (ad, e-posta, cihaz kimliği, konum, IP) toplanmaz; oturum kimliği rastgele üretilir.
+
+### 8.3 Model
+
+- Tabular veri, **lojistik regresyon** (`StandardScaler` + `LogisticRegression`), `sklearn → ONNX`.
+- Çıktı: `p = P(zorlandi = 1)`.
+- **Karar eşiği: 0.50.** `p ≥ 0.50` ise o kararda **destek modu** açılır:
+  - sayaç kaldırılır (süre baskısı yok),
+  - ipucu kartı açık gelir,
+  - kararın üstünde nedeni yazan "Destek açıldı" notu görünür.
+- `p < 0.50` ise v1 kuralları (§3) değişmeden uygulanır. Model yalnızca desteği **artırabilir**, hiçbir zaman azaltmaz (yeni başlayana sayaç açmaz).
+- Model yüklenemezse oyun v1 kurallarıyla devam eder.
+
+### 8.4 Eval metriği ve kabul eşiği (altın standart)
+
+Veri **oturuma göre** bölünür (`GroupShuffleSplit`, %30 test, `random_state=42`): aynı oturumun kararları hem eğitimde hem testte olamaz.
+
+| Metrik (test kümesi) | Kabul eşiği | Neden |
+|---|---|---|
+| **ROC-AUC** (birincil) | **≥ 0.70** | Eşikten bağımsız sıralama gücü; sınıflar dengesiz olabilir |
+| Zorlanan için **recall** (eşik 0.50) | **≥ 0.60** | Zorlanan oyuncuyu kaçırmak, gereksiz ipucu vermekten daha pahalı |
+| ROC-AUC − kural tabanı AUC'si | **> 0** | Model, yalnızca `konu_puani`'na bakan v1 kuralından (`1 − konu_puani/100`) iyi olmalı; değilse model eklemeye değmez |
+
+- Üçünden biri sağlanmazsa `train.py` sıfırdan farklı çıkış koduyla durur ve `model/` altına artefakt yazmaz.
+- Ek olarak (kapı değil, raporlanır): ONNX ile sklearn olasılık farkı `< 1e-4` (aşılırsa yine durur); yalnız `kaynak = gercek` satırlarındaki AUC model kartında ayrıca yazılır.
