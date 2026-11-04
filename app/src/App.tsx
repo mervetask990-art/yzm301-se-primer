@@ -40,6 +40,16 @@ import { OutcomeScreen } from './components/OutcomeScreen';
 import { EndingScreen } from './components/EndingScreen';
 import { TopBar } from './components/TopBar';
 import { TutorSheet } from './components/TutorSheet';
+import {
+  DecisionRow,
+  Features,
+  appendRow,
+  loadRows,
+  newPlayerId,
+  playerId,
+  randomId,
+  round1,
+} from './telemetry';
 
 const scenario = scenarioData as unknown as ScenarioData;
 
@@ -191,6 +201,41 @@ function decisionSupport(journal: Journal, decision: DecisionData, chosenLevel: 
   return { tier, timerSeconds, note };
 }
 
+// Riskli karar = B seçimi veya süre aşımı (model etiketi `zorlandi` ile aynı tanım)
+function pastRiskyRatio(journal: Journal): number {
+  let risky = 0;
+  let total = 0;
+  for (const run of journal.runs) {
+    for (const [id, choice] of Object.entries(run.choices)) {
+      total += 1;
+      if (choice === 'B' || run.timedOut[id]) risky += 1;
+    }
+  }
+  return total === 0 ? 0 : Math.round((risky / total) * 1000) / 1000;
+}
+
+// Model girdileri: yalnızca kararın BAŞINDA bilinenler (spec §8.2)
+function decisionFeatures(
+  state: GameState,
+  journal: Journal,
+  decision: DecisionData,
+  timerSeconds: number | null,
+  prev: { seconds: number; switches: number } | null,
+): Features {
+  const risky = Object.keys(state.choices).filter((id) => state.choices[id] === 'B' || state.timedOut[id]).length;
+  return {
+    karar_no: state.currentDecisionIndex + 1,
+    konu_puani: topicScore(journal, decision.skillTopic, state.level),
+    sure_baskisi: timerSeconds !== null ? 1 : 0,
+    onceki_karar_suresi_sn: prev ? prev.seconds : 0,
+    onceki_gidip_gelme: prev ? prev.switches : 0,
+    onceki_riskli_sayisi: risky,
+    ipucu_sayisi: Object.values(state.revealedHints).filter(Boolean).length,
+    tutor_mesaj_sayisi: state.tutorMessages,
+    gecmis_riskli_oran: pastRiskyRatio(journal),
+  };
+}
+
 // Evidence from one crisis run: careful choices raise the topic, risky ones and timeouts lower it
 function runEvents(state: GameState): SkillEvent[] {
   const events: SkillEvent[] = [];
@@ -248,6 +293,17 @@ export default function App() {
   const [notebookOpen, setNotebookOpen] = useState(false);
   const [runSkillEvents, setRunSkillEvents] = useState<SkillEvent[]>([]);
   const savedRunIdRef = useRef<string | null>(null);
+  // Veri toplama: bu nöbetin rastgele oturum kimliği ve karar anındaki ölçümler
+  const [dataRowCount, setDataRowCount] = useState(() => loadRows().length);
+  const sessionIdRef = useRef<string>(randomId('s'));
+  const prevDecisionRef = useRef<{ seconds: number; switches: number } | null>(null);
+  const decisionStartRef = useRef<{
+    decisionId: string;
+    startedAt: number;
+    features: Features;
+    switches: number;
+    lastHover: ChoiceId | null;
+  } | null>(null);
 
   const currentClock = calculateCurrentClock(state);
   const currentDecision = scenario.decisions[state.currentDecisionIndex];
@@ -256,6 +312,54 @@ export default function App() {
   // Fading support: each decision gets the support its topic's mastery calls for,
   // not the single level the player picked at the start
   const support = currentDecision ? decisionSupport(journal, currentDecision, state.level) : null;
+
+  // Kararın başında girdileri dondur: sonradan olan hiçbir şey (bu kararın süresi) girdiye sızmaz
+  useEffect(() => {
+    if (state.step !== 'decision' || !currentDecision) return;
+    if (decisionStartRef.current?.decisionId === currentDecision.id) return;
+    if (state.currentDecisionIndex === 0) {
+      sessionIdRef.current = randomId('s');
+      prevDecisionRef.current = null;
+    }
+    decisionStartRef.current = {
+      decisionId: currentDecision.id,
+      startedAt: Date.now(),
+      features: decisionFeatures(state, journal, currentDecision, support?.timerSeconds ?? null, prevDecisionRef.current),
+      switches: 0,
+      lastHover: null,
+    };
+  }, [state.step, state.currentDecisionIndex]);
+
+  const trackHover = (choice: ChoiceId) => {
+    const d = decisionStartRef.current;
+    if (!d) return;
+    if (d.lastHover && d.lastHover !== choice) d.switches += 1;
+    d.lastHover = choice;
+  };
+
+  const recordDecision = (choice: ChoiceId, isTimeout: boolean) => {
+    const d = decisionStartRef.current;
+    if (!d || !state.level || d.decisionId !== currentDecision?.id) return;
+    const seconds = round1((Date.now() - d.startedAt) / 1000);
+    const row: DecisionRow = {
+      oturum_id: sessionIdRef.current,
+      oyuncu_id: playerId(),
+      kaynak: 'gercek',
+      tarih: new Date().toISOString().slice(0, 10),
+      karar_id: d.decisionId,
+      seviye: state.level,
+      ...d.features,
+      secim: choice,
+      sure_doldu: isTimeout ? 1 : 0,
+      karar_suresi_sn: seconds,
+      gidip_gelme: d.switches,
+      model_p: '',
+      destek_modu: 0,
+      zorlandi: choice === 'B' || isTimeout ? 1 : 0,
+    };
+    setDataRowCount(appendRow(row).length);
+    prevDecisionRef.current = { seconds, switches: d.switches };
+  };
 
   const updateJournal = (update: (j: Journal) => Journal) => {
     setJournal((prev) => {
@@ -293,6 +397,7 @@ export default function App() {
 
   const restart = () => {
     savedRunIdRef.current = null;
+    decisionStartRef.current = null;
     setSeniorTimeLeft(null);
     setRunSkillEvents([]);
     dispatch({ type: 'RESTART' });
@@ -418,7 +523,9 @@ export default function App() {
             onResetJournal={() => {
               clearJournal();
               setJournal(emptyJournal);
+              newPlayerId(); // aynı cihazda sıradaki kişi yeni bir rastgele oyuncu kimliği alır
             }}
+            dataRowCount={dataRowCount}
           />
         )}
 
@@ -458,8 +565,10 @@ export default function App() {
                 if (support?.tier === 'new') {
                   dispatch({ type: 'TOGGLE_HINT', decisionId: currentDecision.id });
                 }
+                recordDecision(choice, Boolean(isTimeout));
                 dispatch({ type: 'MAKE_CHOICE', choice, isTimeout });
               }}
+              onHoverChoice={trackHover}
               onOpenTutor={() => setIsTutorOpen(true)}
               onTimeUpdate={(sec) => setSeniorTimeLeft(sec)}
             />

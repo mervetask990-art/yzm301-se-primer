@@ -1,3 +1,4 @@
+import { downloadCsv, loadRows } from '../telemetry';
 import React from 'react';
 import { Terminal, Server, Flag, CheckCircle2, ArrowRight, BookMarked, User, TrendingUp, Search, Compass, Siren, BookOpen, Target } from 'lucide-react';
 import { LanternLogo } from './LanternLogo';
@@ -23,6 +24,7 @@ interface IntakeScreenProps {
   onNameChange: (name: string) => void;
   insights: Insights;
   onResetJournal: () => void;
+  dataRowCount: number;
 }
 
 export const IntakeScreen: React.FC<IntakeScreenProps> = ({
@@ -42,6 +44,7 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
   onNameChange,
   insights,
   onResetJournal,
+  dataRowCount,
 }) => {
   const isComplete = Boolean(level && role && goal);
   const hasSkills = Object.keys(skills).length > 0;
@@ -428,6 +431,19 @@ export const IntakeScreen: React.FC<IntakeScreenProps> = ({
           <span className="font-mono text-[11px] text-[#9FB0C3]">
             Günlüğün yalnızca bu cihazda saklanır.
           </span>
+          {dataRowCount > 0 && (
+            <div data-testid="data-panel" className="flex items-center gap-2 font-mono text-[11px] text-[#9FB0C3]">
+              <span data-testid="data-count">Veri toplama: {dataRowCount} karar</span>
+              <button
+                type="button"
+                data-testid="data-download"
+                onClick={() => downloadCsv(loadRows())}
+                className="min-h-[44px] px-2 underline underline-offset-4 hover:text-[#5FB3A8] cursor-pointer"
+              >
+                CSV indir
+              </button>
+            </div>
+          )}
           {isReturning && (
             <button
               type="button"

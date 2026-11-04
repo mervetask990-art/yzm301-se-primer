@@ -13,6 +13,7 @@ interface DecisionScreenProps {
   onMakeChoice: (choice: ChoiceId, isTimeout?: boolean) => void;
   onOpenTutor: () => void;
   onTimeUpdate?: (secondsLeft: number) => void;
+  onHoverChoice?: (choice: ChoiceId) => void; // A↔B tereddüdünü ölçmek için (veri toplama)
 }
 
 export const DecisionScreen: React.FC<DecisionScreenProps> = ({
@@ -26,6 +27,7 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
   onMakeChoice,
   onOpenTutor,
   onTimeUpdate,
+  onHoverChoice,
 }) => {
   const isSenior = timerSeconds !== null;
   const isMid = level === 'mid';
@@ -172,6 +174,7 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
         <button
           type="button"
           data-testid="choice-A"
+          onPointerEnter={() => onHoverChoice?.('A')}
           onClick={() => handleSelectChoice('A')}
           className="min-h-[56px] p-4 rounded-[16px] bg-[#17263C] border border-[#2A3E5C] hover:border-[#5FB3A8] hover:bg-[#1F3150] text-left flex items-center gap-3.5 cursor-pointer active:scale-98 transition-all group"
         >
@@ -192,6 +195,7 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
         <button
           type="button"
           data-testid="choice-B"
+          onPointerEnter={() => onHoverChoice?.('B')}
           onClick={() => handleSelectChoice('B')}
           className="min-h-[56px] p-4 rounded-[16px] bg-[#17263C] border border-[#2A3E5C] hover:border-[#5FB3A8] hover:bg-[#1F3150] text-left flex items-center gap-3.5 cursor-pointer active:scale-98 transition-all group"
         >
