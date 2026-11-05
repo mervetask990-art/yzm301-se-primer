@@ -15,5 +15,9 @@ services:
         value: production
       - key: NODE_VERSION
         value: "22"
+      # onnxruntime-node 1.22.0 Linux'ta kurulurken GPU (CUDA) eklentisini indirmeye çalışıp düşüyor;
+      # CPU çalışma zamanı paketin içinde gelir, ücretsiz sunucuda GPU yok → ek indirmeyi atla
+      - key: ONNXRUNTIME_NODE_INSTALL
+        value: skip
       - key: GEMINI_API_KEY
         sync: false   # Render panelinde siz girersiniz; repoya yazılmaz
