@@ -5,3 +5,4 @@ cypress/videos/
 .venv/
 __pycache__/
 app/public/model/
+cypress/fixtures/ort-wasm-simd-threaded.*
