@@ -6,7 +6,7 @@
 |---|---|
 | GitHub repo | [github.com/mervetask990-art/yzm301-se-primer](https://github.com/mervetask990-art/yzm301-se-primer) · geçen haftanın teslimi: [`v1.0` etiketi](https://github.com/mervetask990-art/yzm301-se-primer/tree/v1.0) |
 | Hugging Face model (commit'e sabit) | [taskinmerve/se-primer-zorlanma@03d54fe](https://huggingface.co/taskinmerve/se-primer-zorlanma/tree/03d54fe50427aa06dea6073544c6dc725cf6f557) · `model.onnx`: [`resolve/03d54fe…/model.onnx`](https://huggingface.co/taskinmerve/se-primer-zorlanma/resolve/03d54fe50427aa06dea6073544c6dc725cf6f557/model.onnx) |
-| Canlı uygulama | _eklenecek_ |
+| Canlı uygulama (Render) | **[se-primer.onrender.com](https://se-primer.onrender.com)** · ücretsiz katman uykudan uyanırken ilk açılış 30–50 sn sürebilir · diferansiyel test paneli: [`?parite=1`](https://se-primer.onrender.com/?parite=1) |
 | Demo video (60–90 sn) | _eklenecek_ |
 
 ## Kurulum (3 komut)
@@ -38,7 +38,7 @@ Testler (uygulama açıkken, ayrı terminalde, repo kökünde): `npm install && 
 | 6. Diferansiyel test | [tests/parite.py](tests/parite.py) (Python kahini), [tests/parite.json](tests/parite.json), [cypress/e2e/model.cy.ts](cypress/e2e/model.cy.ts) | ✅ 5/5, `|Δ| < 1e-6` |
 | 6. Regresyon testi | geçen haftanın 23 E2E testi ([paths](cypress/e2e/paths.cy.ts), [pusula](cypress/e2e/pusula.cy.ts), [growth](cypress/e2e/growth.cy.ts)) | ✅ 31/31 (23 eski + 8 yeni) |
 | 7. Sınav tasarımı | [SINAV_TASARIMI.md](SINAV_TASARIMI.md) | ✅ |
-| Bonus: kendi sunucu | [app/predict-server.ts](app/predict-server.ts) `POST /api/predict` (`onnxruntime-node`), [render.yaml](render.yaml), `python tests/parite.py --sunucu <url>` | ✅ yerelde 5/5 · Render: _eklenecek_ |
+| Bonus: kendi sunucu | [app/predict-server.ts](app/predict-server.ts) `POST /api/predict` (`onnxruntime-node`), [render.yaml](render.yaml), `python tests/parite.py --sunucu <url>` | ✅ Render'da 5/5 (`python tests/parite.py --sunucu https://se-primer.onrender.com`, `|Δ| < 1e-8`) |
 
 ## Sonuç: ne ölçtük (dürüst özet)
 
