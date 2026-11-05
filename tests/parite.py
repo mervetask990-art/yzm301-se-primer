@@ -3,6 +3,7 @@
     python tests/parite.py --yaz     # tests/parite.json'u (5 referans girdi + Python olasılığı) üretir
     python tests/parite.py           # parite.json'daki beklenen olasılıkları yeniden hesaplayıp doğrular
     python tests/parite.py --hub     # modeli HF'teki commit'e sabit URL'den indirip doğrular
+    python tests/parite.py --sunucu https://<servis>.onrender.com   # üçüncü tüketici: POST /api/predict
 
 Diğer tüketiciler (tarayıcı: cypress/e2e/model.cy.ts, sunucu: /api/predict) aynı girdilere
 |p − p_python| < TOLERANS vermek zorundadır (diferansiyel test, spec KÖ-14).
@@ -69,11 +70,33 @@ def tahmin(sess, config, girdi: dict) -> float:
     return float(out[0, config["output"]["index"]])
 
 
+def sunucu_parite(taban: str):
+    """Bonus: aynı referans girdileri sunucuya gönderir, Python kahininin olasılığıyla kıyaslar."""
+    beklenen = json.loads(PARITE.read_text(encoding="utf-8"))
+    bilgi = json.loads(urllib.request.urlopen(taban + "/api/model", timeout=120).read())
+    print(f"sunucu: {taban} · model v{bilgi['version']} · {bilgi['source']}")
+    hata = 0
+    for v in beklenen["vakalar"]:
+        istek = urllib.request.Request(taban + "/api/predict", data=json.dumps({"inputs": v["girdi"]}).encode(),
+                                       headers={"Content-Type": "application/json"})
+        p = float(json.loads(urllib.request.urlopen(istek, timeout=120).read())["p"])
+        fark = abs(p - v["p"])
+        ok = fark < TOLERANS
+        hata += not ok
+        print(f"  {'✓' if ok else '✗'} |Δ|={fark:.1e}  p={p:.6f}  {v['ad']}")
+    if hata:
+        sys.exit(f"✗ {hata} vaka tolerans dışında")
+    print(f"✓ sunucu 5/5 vaka tolerans ({TOLERANS}) içinde")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--yaz", action="store_true")
     ap.add_argument("--hub", action="store_true")
+    ap.add_argument("--sunucu", metavar="URL", help="kendi sunucumuz (onnxruntime-node) ile parite")
     args = ap.parse_args()
+    if args.sunucu:
+        return sunucu_parite(args.sunucu.rstrip("/"))
     sess, config, kaynak = oturum(args.hub)
     print(f"kahin: onnxruntime {ort.__version__} · model v{config['version']} · {kaynak}")
 

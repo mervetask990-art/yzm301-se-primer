@@ -1,0 +1,19 @@
+# Render.com Blueprint (ücretsiz katman): New → Blueprint → bu repo.
+# Tek servis: oyun (tarayıcıda onnxruntime-web), tutor/Pusula (Gemini, anahtar sunucuda kalır)
+# ve bonus tüketici POST /api/predict (onnxruntime-node). Model HF commit'ine sabit URL'den iner.
+services:
+  - type: web
+    name: se-primer
+    runtime: node
+    plan: free
+    rootDir: app
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npx tsx server.ts
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: GEMINI_API_KEY
+        sync: false   # Render panelinde siz girersiniz; repoya yazılmaz

@@ -38,7 +38,7 @@ Testler (uygulama açıkken, ayrı terminalde, repo kökünde): `npm install && 
 | 6. Diferansiyel test | [tests/parite.py](tests/parite.py) (Python kahini), [tests/parite.json](tests/parite.json), [cypress/e2e/model.cy.ts](cypress/e2e/model.cy.ts) | ✅ 5/5, `|Δ| < 1e-6` |
 | 6. Regresyon testi | geçen haftanın 23 E2E testi ([paths](cypress/e2e/paths.cy.ts), [pusula](cypress/e2e/pusula.cy.ts), [growth](cypress/e2e/growth.cy.ts)) | ✅ 31/31 (23 eski + 8 yeni) |
 | 7. Sınav tasarımı | [SINAV_TASARIMI.md](SINAV_TASARIMI.md) | ✅ |
-| Bonus: kendi sunucu | [app/predict-server.ts](app/predict-server.ts) `POST /api/predict` (`onnxruntime-node`) | ⏳ Render'a yüklenmedi |
+| Bonus: kendi sunucu | [app/predict-server.ts](app/predict-server.ts) `POST /api/predict` (`onnxruntime-node`), [render.yaml](render.yaml), `python tests/parite.py --sunucu <url>` | ✅ yerelde 5/5 · Render: _eklenecek_ |
 
 ## Sonuç: ne ölçtük (dürüst özet)
 
