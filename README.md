@@ -4,7 +4,7 @@
 
 | | Link |
 |---|---|
-| GitHub repo (v2 dalı) | [github.com/mervetask990-art/yzm301-se-primer/tree/v2](https://github.com/mervetask990-art/yzm301-se-primer/tree/v2) |
+| GitHub repo | [github.com/mervetask990-art/yzm301-se-primer](https://github.com/mervetask990-art/yzm301-se-primer) · geçen haftanın teslimi: [`v1.0` etiketi](https://github.com/mervetask990-art/yzm301-se-primer/tree/v1.0) |
 | Hugging Face model (commit'e sabit) | [taskinmerve/se-primer-zorlanma@03d54fe](https://huggingface.co/taskinmerve/se-primer-zorlanma/tree/03d54fe50427aa06dea6073544c6dc725cf6f557) · `model.onnx`: [`resolve/03d54fe…/model.onnx`](https://huggingface.co/taskinmerve/se-primer-zorlanma/resolve/03d54fe50427aa06dea6073544c6dc725cf6f557/model.onnx) |
 | Canlı uygulama | _eklenecek_ |
 | Demo video (60–90 sn) | _eklenecek_ |
