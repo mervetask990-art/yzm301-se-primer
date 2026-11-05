@@ -33,7 +33,11 @@ ISARET = "<!-- surum-gecmisi -->"
 
 
 def kaynak_yaz(repo: str, commit: str, surum: str):
-    KAYNAK.write_text(json.dumps({"repo": repo, "commit": commit, "version": surum}, indent=2) + "\n", encoding="utf-8")
+    # rollout (shadow / canary / full) ayarı korunur: yeni sürüm yayını devreye alma aşamasını değiştirmez
+    eski = json.loads(KAYNAK.read_text(encoding="utf-8")) if KAYNAK.exists() else {}
+    yeni = {"repo": repo, "commit": commit, "version": surum,
+            "rollout": eski.get("rollout", {"mode": "full", "percent": 100})}
+    KAYNAK.write_text(json.dumps(yeni, indent=2) + "\n", encoding="utf-8")
     print(f"✓ {KAYNAK.relative_to(KOK)} → {repo}@{commit[:12]}")
 
 

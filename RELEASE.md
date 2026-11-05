@@ -19,6 +19,7 @@ tüketici haberi olmadan değişir. Commit ise değişmez (Sommerville Bl. 25, k
 | Sürüm | Tarih | HF commit | Test AUC | Recall@0.5 | Veri | Önceki commit (rollback hedefi) |
 |---|---|---|---|---|---|---|
 | v2.0.0 | 2026-11-05 | **yayınlanmadı** — eval kapısında durdu | 0.6876 | 0.592 | 20 gerçek / 584 sentetik oturum | — |
+| v2.1.0 | 2026-11-05 | [`03d54fe50427`](https://huggingface.co/taskinmerve/se-primer-zorlanma/tree/03d54fe50427aa06dea6073544c6dc725cf6f557) | 0.7269 | 0.6043 | 20 gerçek / 635 sentetik oturum | `—` |
 <!-- surum-gecmisi -->
 
 v2.0.0'ın kapıda durduğu çıktı (`python train.py`, gerçek + sentetik):

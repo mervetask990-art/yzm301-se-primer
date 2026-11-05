@@ -1,6 +1,6 @@
 {
-  "repo": "",
-  "commit": "",
-  "version": "",
+  "repo": "taskinmerve/se-primer-zorlanma",
+  "commit": "03d54fe50427aa06dea6073544c6dc725cf6f557",
+  "version": "2.1.0",
   "rollout": { "mode": "full", "percent": 100 }
 }
