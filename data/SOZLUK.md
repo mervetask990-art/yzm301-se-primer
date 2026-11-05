@@ -57,3 +57,5 @@ Hepsi **kararın başında** ölçülür; o kararda sonradan olan hiçbir şey g
 - `onceki_gidip_gelme` dokunmatik ekranda yalnızca parmağın seçeneğe değdiği anları sayar; fare ile dokunma arasında ölçek farkı olabilir.
 - `destek_modu = 1` olan satırlarda etiket, modelin kendi müdahalesinden etkilenmiştir (ipucu görmek B seçme olasılığını düşürür). Sonraki sürümleri eğitirken bu satırlar ayrı değerlendirilmelidir.
 - Gerçek oturumlar aynı sınıftan arkadaşlardan gelir; genel öğrenci kitlesini temsil etmez.
+- **Toplanan gerçek veride (20 oturum, 3 oyuncu kimliği: 6 + 9 + 5 oturum)** kimliklerden birinde 9 oturum var ve `konu_puani` kesintisiz 70 → 100 artıyor; 2. ve 3. kişi arasında "Günlüğü sıfırla" atlanmış olabilir. Bu durumda 3. kişinin `konu_puani` ve `gecmis_riskli_oran` girdileri bir önceki kişinin geçmişini taşır. Oturumlar tahminle bölünmedi; olduğu gibi kullanıldı.
+- Gerçek kararların çoğu 0,5–2 sn'de verildi (oyuncular senaryoyu tekrarlarken hızlanıyor); `onceki_karar_suresi_sn` bu yüzden gerçek veride sentetiğe göre çok daha dar bir aralıkta.

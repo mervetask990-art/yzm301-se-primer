@@ -66,8 +66,11 @@ oyuncular "ipucu her yerde açılıyor" der, tarayıcı konsolunda `Sözleşme u
 4. **Acil durdurma (v1'e dön):** `rollout.mode` değerini `"shadow"` yap. Model hesaplamaya ve kaydetmeye devam eder ama
    oyunu değiştirmez: bu, modeli tamamen kapatmaktan daha iyidir çünkü sorunu incelemek için veri akmaya devam eder.
 
-Rollback'in kendisi de test edilir: v2.0.0-rc (yalnız sentetik) ve v2.0.0 (gerçek + sentetik) iki ayrı commit'tir;
-`--geri-al` ile rc'ye dönüp parite testini koşmak, geri dönüş yolunun gerçekten çalıştığını gösterir.
+**Dürüstlük notu:** HF'te şu an tek yayınlanmış sürüm var (v2.1.0 → `03d54fe`); v2.0.0 eval kapısında durduğu
+için hiç yayınlanmadı. Bu yüzden "önceki commit'e dön" yolu henüz gerçek iki sürüm arasında denenmedi. İlk durumda
+geri alma = **v1 kurallarına dönmek**tir: `rollout.mode = "shadow"` (model kaydeder, oyunu değiştirmez) ya da
+model yüklenemezse otomatik v1 (KÖ-14). Bir sonraki sürüm yayınlandığında `--geri-al 03d54fe…` ile dönüp
+`python tests/parite.py --hub` koşmak, geri dönüş yolunun gerçekten çalıştığını gösterecek ilk test olacaktır.
 
 ## Yeni sürümü güvenle devreye alma
 
