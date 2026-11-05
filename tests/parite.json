@@ -1,0 +1,83 @@
+{
+  "model_version": "2.1.0",
+  "tolerans": 0.0001,
+  "kahin": "Python onnxruntime 1.31.1",
+  "esik": 0.5,
+  "vakalar": [
+    {
+      "ad": "K1 · yeni oyuncu, geçmiş yok",
+      "girdi": {
+        "karar_no": 1,
+        "konu_puani": 15,
+        "sure_baskisi": 0,
+        "onceki_karar_suresi_sn": 0,
+        "onceki_gidip_gelme": 0,
+        "onceki_riskli_sayisi": 0,
+        "ipucu_sayisi": 0,
+        "tutor_mesaj_sayisi": 0,
+        "gecmis_riskli_oran": 0
+      },
+      "p": 0.24836597
+    },
+    {
+      "ad": "KÖ-12 · deneyimli, K1'de 40 sn tereddüt, 4 gidip gelme, B",
+      "girdi": {
+        "karar_no": 2,
+        "konu_puani": 70,
+        "sure_baskisi": 1,
+        "onceki_karar_suresi_sn": 40,
+        "onceki_gidip_gelme": 4,
+        "onceki_riskli_sayisi": 1,
+        "ipucu_sayisi": 0,
+        "tutor_mesaj_sayisi": 0,
+        "gecmis_riskli_oran": 0
+      },
+      "p": 0.80754441
+    },
+    {
+      "ad": "KÖ-13 · deneyimli, K1'de 8 sn, gidip gelme yok, A",
+      "girdi": {
+        "karar_no": 2,
+        "konu_puani": 70,
+        "sure_baskisi": 1,
+        "onceki_karar_suresi_sn": 8,
+        "onceki_gidip_gelme": 0,
+        "onceki_riskli_sayisi": 0,
+        "ipucu_sayisi": 0,
+        "tutor_mesaj_sayisi": 0,
+        "gecmis_riskli_oran": 0
+      },
+      "p": 0.41661239
+    },
+    {
+      "ad": "K3 · orta, iki riskli karar, tutor kullanmış, riskli geçmiş",
+      "girdi": {
+        "karar_no": 3,
+        "konu_puani": 38,
+        "sure_baskisi": 0,
+        "onceki_karar_suresi_sn": 22.5,
+        "onceki_gidip_gelme": 2,
+        "onceki_riskli_sayisi": 2,
+        "ipucu_sayisi": 1,
+        "tutor_mesaj_sayisi": 2,
+        "gecmis_riskli_oran": 0.667
+      },
+      "p": 0.7230199
+    },
+    {
+      "ad": "K3 · usta, hızlı, temiz geçmiş (uç değer)",
+      "girdi": {
+        "karar_no": 3,
+        "konu_puani": 96,
+        "sure_baskisi": 1,
+        "onceki_karar_suresi_sn": 3.1,
+        "onceki_gidip_gelme": 0,
+        "onceki_riskli_sayisi": 0,
+        "ipucu_sayisi": 0,
+        "tutor_mesaj_sayisi": 0,
+        "gecmis_riskli_oran": 0.0
+      },
+      "p": 0.33838952
+    }
+  ]
+}

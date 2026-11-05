@@ -1,9 +1,10 @@
 # SE Primer v2 — Python bağımlılıkları (eğitim, ONNX, parite testi, HF yayını)
-# Kurulumdan sonra tam sürümler `pip freeze` ile buraya sabitlenir (tekrarlanabilirlik).
-numpy
-pandas
-scikit-learn
-skl2onnx
-onnx
-onnxruntime
-huggingface_hub
+# Sürümler sabit: model/config.json'daki metrikler bu sürümlerle üretildi (tekrarlanabilirlik).
+# Not: pandas 3.1.x, Windows Smart App Control'e takıldığı için 3.0.3'te tutuldu.
+numpy==2.4.6
+pandas==3.0.3
+scikit-learn==1.9.1
+skl2onnx==1.20.0
+onnx==1.23.2
+onnxruntime==1.31.1
+huggingface_hub==2.4.0

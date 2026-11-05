@@ -4,3 +4,4 @@ cypress/videos/
 .env
 .venv/
 __pycache__/
+app/public/model/

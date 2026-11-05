@@ -85,8 +85,9 @@ describe('Model oyunun davranışını değiştirir', () => {
     cy.window().then((w) => {
       const rows = JSON.parse(w.localStorage.getItem('se-primer-oturumlar-v1') || '[]');
       expect(rows).to.have.length(2);
-      expect(rows[0]).to.include({ karar_id: 'K1', zorlandi: 1, gidip_gelme: 4, kaynak: 'gercek' });
-      expect(rows[1]).to.include({ karar_id: 'K2', onceki_gidip_gelme: 4, onceki_karar_suresi_sn: 40, destek_modu: 1 });
+      // 4 gidip gelme A'da biter; B'ye tıklamak için imleci B'ye götürmek 5. geçiştir
+      expect(rows[0]).to.include({ karar_id: 'K1', zorlandi: 1, gidip_gelme: 5, kaynak: 'gercek' });
+      expect(rows[1]).to.include({ karar_id: 'K2', onceki_gidip_gelme: 5, onceki_karar_suresi_sn: 40, destek_modu: 1 });
       expect(rows[1].model_p).to.be.a('number');
       expect(Object.keys(rows[0])).not.to.include.members(['ad', 'name', 'email']);
     });

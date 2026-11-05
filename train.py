@@ -33,7 +33,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 TOHUM = 42
-SURUM = "2.0.0"
+SURUM = "2.1.0"
 BURASI = Path(__file__).resolve().parent
 VERI = BURASI / "data" / "oturumlar.csv"
 MODEL_DIR = BURASI / "model"
@@ -201,6 +201,17 @@ def main():
     print(f"✓ artefakt yazıldı → model/ (model.onnx, config.json, README.md)")
 
 
+def gercek_uyari(mg: dict) -> str:
+    if mg["auc"] is None or mg["auc"] >= 0.6:
+        return ""
+    return (f"\n> ⚠️ **Gerçek oyuncularda işe yaradığına dair kanıt yok.** Yalnız gerçek satırlarda AUC {mg['auc']} "
+            "(0.5 = yazı-tura). Kapı, sentetik verinin baskın olduğu karışık test kümesinde geçildi; model büyük "
+            "ölçüde sentetik üreticinin varsayımlarını öğreniyor. Bu sürüm ders demosu ve boru hattının "
+            "(eğit → ONNX → yayın → parite) uçtan uca doğrulanması için yayınlandı. Gerçek bir sınıfa açılmadan önce "
+            "**gölge modda** (`RELEASE.md`) yeterli gerçek veri toplanmalı ve yalnız gerçek veride yeniden ölçülmelidir. "
+            "Ek olarak `zorlandi` etiketi zorlanma ile bilinçli keşfi (diğer sonu merak etmek) ayıramıyor (`spec.md §8.5`).\n")
+
+
 def model_karti(c: dict) -> str:
     m, mg, d = c["metrics"]["test"], c["metrics"]["test_gercek"], c["data"]
     ozellik = "\n".join(f"| {i + 1} | `{f['name']}` | {f['label']} | {f['unit']} |" for i, f in enumerate(c["features"]))
@@ -274,6 +285,7 @@ Bölme: {d["split"]}, tohum {c["seed"]}. Kabul eşikleri eğitimden önce `spec.
 
 **Yalnız gerçek test satırları:** n = {mg["n"]}, AUC = {mg["auc"]}, recall = {mg["recall"]}.
 Gerçek test satırı az olduğu için bu sayının güven aralığı geniştir; kapı karışık test kümesi üzerinde uygulanır.
+{gercek_uyari(mg)}
 
 ## Sınırlar ve etik notlar
 - **Sentetik veri baskın.** Sentetik veri, gizli bir "kararsızlık" eğiliminin süreye ve gidip gelmeye yansıdığı

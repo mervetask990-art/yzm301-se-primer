@@ -5,17 +5,19 @@
 1) data/gercek/*.csv  → oyunun "CSV indir" çıktıları (kaynak=gercek), olduğu gibi alınır.
 2) Sentetik üretici   → kaynak=sentetik, sabit tohum (TOHUM=42), kural aşağıda.
 
-SENTETİK ÜRETİCİ KURALI (README.md'de de yazılı)
--------------------------------------------------
+SENTETİK ÜRETİCİ KURALI v2.1 (README.md'de de yazılı; neden değişti: spec.md §8.5)
+----------------------------------------------------------------------------------
 Her sentetik oyuncunun gizli bir "kararsızlık" eğilimi vardır: z ~ N(0, 1). Oyuncu 1–6 nöbet oynar.
 Oyun kuralları uygulamadakiyle aynıdır (konu puanı, kademe, 60/45 sn sayaç, ipucu, puan güncellemesi).
 
 Her kararda:
   karar süresi   t   ~ LogNormal(log(9) + 0.45·z + 0.6·(1 − puan/100) + 0.25·[karar 3], 0.45)  saniye
-  gidip gelme    g   ~ Poisson(0.4 + 0.9·max(z, 0) + 0.3·[ipucu açık])
+  gidip gelme    g   ~ Poisson(0.6 + 0.3·|z| + 0.3·[ipucu açık])        (etiketle yönlü bağı yok — §8.5/4)
   tutor sorusu       ~ Poisson(0.15 + 0.25·max(z, 0))
   ipucu (gelişen)    ~ Bernoulli(0.25 + 0.2·[z > 0])
-  zorlanma logiti    = −0.6 + 0.9·z − 2.2·(puan − 50)/100 + 0.35·(önceki riskli) − 0.5·[ipucu açık] + ε,  ε ~ N(0, 0.8)
+  keşif              = 0.35·(nöbet sırası, 0'dan) + 1.5·(puan − 50)/100      (§8.5/2: tekrar oynayan diğer sonu merak eder)
+  zorlanma logiti    = −0.5 + 0.8·z + keşif − 1.1·[önceki karar B]           (§8.5/1: toparlanma)
+                       + 0.08·(önceki karar süresi − 9) − 0.4·[ipucu açık] + ε,  ε ~ N(0, 0.8)   (§8.5/3)
   zorlandi           = Bernoulli(σ(logit));  sayaç varsa ve t > süre ise süre doldu → zorlandi = 1
 Model z'yi görmez; z yalnızca önceki kararın süresi, gidip gelme, tutor kullanımı ve geçmiş
 riskli oran üzerinden dolaylı olarak izlenebilir. Bu bilinçli bir varsayımdır (bkz. model kartı → sınırlar).
@@ -80,6 +82,7 @@ def sentetik(rng: np.random.Generator) -> pd.DataFrame:
         for n in range(int(rng.integers(1, 7))):
             oturum_id = f"s-sen{o:04d}-{n}"
             onceki = None
+            onceki_secim = None
             riskli = ipucu = tutor = 0
             for i, (kid, konu) in enumerate(KARARLAR):
                 p_konu = float(np.clip(round(puan[konu]), 0, 100))
@@ -99,10 +102,13 @@ def sentetik(rng: np.random.Generator) -> pd.DataFrame:
                 # karar anındaki davranış
                 ipucu_acik = k == "new" or (k == "mid" and rng.random() < 0.25 + 0.2 * (z > 0))
                 t = float(rng.lognormal(math.log(9) + 0.45 * z + 0.6 * (1 - p_konu / 100) + 0.25 * (i == 2), 0.45))
-                g = int(rng.poisson(0.4 + 0.9 * max(z, 0) + 0.3 * ipucu_acik))
+                g = int(rng.poisson(0.6 + 0.3 * abs(z) + 0.3 * ipucu_acik))
                 tutor += int(rng.poisson(0.15 + 0.25 * max(z, 0)))
-                logit = (-0.6 + 0.9 * z - 2.2 * (p_konu - 50) / 100 + 0.35 * riskli
-                         - 0.5 * ipucu_acik + rng.normal(0, 0.8))
+                kesif = 0.35 * n + 1.5 * (p_konu - 50) / 100
+                onceki_b = 1 if onceki_secim == "B" else 0
+                onceki_sure = onceki[0] if onceki else 9.0
+                logit = (-0.5 + 0.8 * z + kesif - 1.1 * onceki_b + 0.08 * (onceki_sure - 9)
+                         - 0.4 * ipucu_acik + rng.normal(0, 0.8))
                 sure_doldu = sure_limit is not None and t > sure_limit
                 if sure_doldu:
                     t = float(sure_limit)
@@ -127,6 +133,7 @@ def sentetik(rng: np.random.Generator) -> pd.DataFrame:
                     puan[konu] -= 3
                 puan[konu] = float(np.clip(puan[konu], 0, 100))
                 onceki = (round(t, 1), g)
+                onceki_secim = secim
             gecmis_riskli += riskli
             gecmis_toplam += len(KARARLAR)
     return pd.DataFrame(satirlar, columns=SUTUNLAR)

@@ -1,0 +1,157 @@
+{
+  "name": "se-primer-zorlanma",
+  "version": "2.1.0",
+  "description": "SE Primer: oyuncunun sıradaki kararda zorlanma (B seçme / süre aşımı) olasılığı.",
+  "target": "zorlandi",
+  "classes": [
+    "0",
+    "1"
+  ],
+  "class_labels": {
+    "0": "zorlanmadı (A seçti)",
+    "1": "zorlandı (B seçti veya süre doldu)"
+  },
+  "output": {
+    "name": "probabilities",
+    "index": 1,
+    "meaning": "P(zorlandi = 1)"
+  },
+  "decision_threshold": 0.5,
+  "decision_rule": "p >= decision_threshold → destek modu: sayaç yok, ipucu açık (yalnızca desteği artırır)",
+  "input": {
+    "name": "input",
+    "dtype": "float32",
+    "shape": [
+      null,
+      9
+    ]
+  },
+  "features": [
+    {
+      "name": "karar_no",
+      "label": "Nöbetteki karar sırası",
+      "unit": "1–3",
+      "example": 1.0,
+      "min": 1.0,
+      "max": 3.0
+    },
+    {
+      "name": "konu_puani",
+      "label": "Kararın konusundaki beceri puanı",
+      "unit": "puan 0–100",
+      "example": 44.0,
+      "min": 0.0,
+      "max": 100.0
+    },
+    {
+      "name": "sure_baskisi",
+      "label": "Kurala göre sayaç açık mı",
+      "unit": "0/1",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    {
+      "name": "onceki_karar_suresi_sn",
+      "label": "Önceki kararda geçen süre (K1'de 0)",
+      "unit": "saniye",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 90.0
+    },
+    {
+      "name": "onceki_gidip_gelme",
+      "label": "Önceki kararda A↔B geçişi (K1'de 0)",
+      "unit": "adet",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 8.0
+    },
+    {
+      "name": "onceki_riskli_sayisi",
+      "label": "Bu nöbette şimdiye kadarki B / süre aşımı",
+      "unit": "adet",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 2.0
+    },
+    {
+      "name": "ipucu_sayisi",
+      "label": "Bu nöbette açılan ipucu",
+      "unit": "adet",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 2.0
+    },
+    {
+      "name": "tutor_mesaj_sayisi",
+      "label": "Bu nöbette tutor'a sorulan soru",
+      "unit": "adet",
+      "example": 0.0,
+      "min": 0.0,
+      "max": 6.0
+    },
+    {
+      "name": "gecmis_riskli_oran",
+      "label": "Önceki nöbetlerde riskli karar oranı",
+      "unit": "oran 0–1",
+      "example": 0.4,
+      "min": 0.0,
+      "max": 1.0
+    }
+  ],
+  "coefficients_standardized": {
+    "karar_no": -0.2866,
+    "konu_puani": 0.2794,
+    "sure_baskisi": -0.0294,
+    "onceki_karar_suresi_sn": 0.7187,
+    "onceki_gidip_gelme": -0.0178,
+    "onceki_riskli_sayisi": -0.1124,
+    "ipucu_sayisi": -0.0495,
+    "tutor_mesaj_sayisi": 0.0633,
+    "gecmis_riskli_oran": 0.567
+  },
+  "metrics": {
+    "test": {
+      "n": 591,
+      "auc": 0.7269,
+      "recall": 0.6043,
+      "accuracy": 0.6684,
+      "taban_auc": 0.4194,
+      "taban_ustu": 0.3075
+    },
+    "test_gercek": {
+      "n": 18,
+      "auc": 0.4625,
+      "recall": 0.5,
+      "accuracy": 0.4444
+    }
+  },
+  "acceptance": {
+    "auc_min": 0.7,
+    "recall_min": 0.6,
+    "taban_ustu_min": 0.0,
+    "kaynak": "spec.md §8.4"
+  },
+  "onnx_max_abs_diff": 8.74e-08,
+  "data": {
+    "file": "data/oturumlar.csv",
+    "sha256": "2d1547bf75e2a7d455c6f04f25141ad0fb0ed12436024c35e96ced22d091e027",
+    "rows": 1965,
+    "sessions": 655,
+    "rows_by_source": {
+      "sentetik": 1905,
+      "gercek": 60
+    },
+    "sessions_by_source": {
+      "gercek": 20,
+      "sentetik": 635
+    },
+    "positive_rate": 0.4743,
+    "split": "GroupShuffleSplit(test_size=0.3, groups=oturum_id)",
+    "kaynak_filtresi": "hepsi"
+  },
+  "seed": 42,
+  "sklearn_version": "1.9.1",
+  "python_version": "3.11"
+}
