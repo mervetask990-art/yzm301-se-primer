@@ -298,3 +298,28 @@ Veri **oturuma göre** bölünür (`GroupShuffleSplit`, %30 test, `random_state=
 
 - Üçünden biri sağlanmazsa `train.py` sıfırdan farklı çıkış koduyla durur ve `model/` altına artefakt yazmaz.
 - Ek olarak (kapı değil, raporlanır): ONNX ile sklearn olasılık farkı `< 1e-4` (aşılırsa yine durur); yalnız `kaynak = gercek` satırlarındaki AUC model kartında ayrıca yazılır.
+
+### 8.5 v2.1 revizyonu (gerçek veriden sonra, yeniden eğitimden ÖNCE yazıldı)
+
+**Ne oldu:** v2.0 iki kez eval kapısında durdu (yalnız sentetik: AUC 0.679, recall 0.578; gerçek + sentetik: AUC 0.688, recall 0.592) ve **yayınlanmadı**. Daha önemlisi, gerçek oyuncuların test satırlarında AUC **0.49**, eğitim kümesindeki çapraz doğrulamada **0.32** çıktı: model sentetik veriden gerçek davranışın **tersini** öğrenmişti.
+
+**Gerçek veride (20 oturum, 60 karar) gözlenen örüntüler** — örneklem küçük, yön göstergesidir:
+
+| Örüntü | Gerçek | v2.0 üretici varsayımı |
+|---|---|---|
+| B'den sonraki kararda B | %39 (A'dan sonra %59) | riskli seçim riskli seçimi artırır ✗ |
+| Önceki kararda ≥ 10 sn düşündüyse B | %71 (n = 7) | tereddüt zorlanmayı artırır ✓ |
+| Önceki kararda ≥ 3 A↔B geçişi varsa B | %36 (n = 11) | artırır — kanıt yok |
+| Konu puanı ≥ 70 iken B | %62 (< 70 iken %41) | usta oyuncu daha az B seçer ✗ |
+
+**Yorum (geçerleme bulgusu):** Oyuncular tekrar oynadıkça diğer sonu görmek için **bilerek** B seçiyor. `zorlandi` etiketi "zorlanma" ile "keşif"i ayırt edemiyor. Bu, etiketin geçerliliğine dair bir sınırdır ve model kartına yazılır; v3'te "Neden bu seçeneği seçtin? (emin değilim / diğer sonu merak ettim)" sorusuyla ayrılmalıdır.
+
+**v2.1'de değişen yalnızca sentetik üreticinin varsayımlarıdır** (`data/veri_hazirla.py`, yeni tohum değil, aynı TOHUM = 42):
+1. **Toparlanma:** önceki kararda B seçen oyuncunun bu karardaki B eğilimi azalır (gerçek: %59 → %39).
+2. **Keşif:** oyuncunun kaçıncı nöbeti olduğu ve konu puanı arttıkça "diğer sonu görmek için" B seçme eğilimi artar.
+3. **Tereddüt taşınır:** önceki kararda uzun düşünmek bu kararda B eğilimini artırır (korunur).
+4. **Gidip gelme:** kanıt olmadığı için etiketle bağı kaldırılır; yalnızca gürültülü bir davranış ölçüsü olarak üretilir.
+
+**Değişmeyenler:** 9 girdi ve sırası, model ailesi (lojistik regresyon), karar eşiği 0.50 ve **§8.4'teki üç kabul eşiğinin tamamı** (AUC ≥ 0.70, recall ≥ 0.60, kural tabanından iyi). Eşikler gevşetilmedi.
+
+**Bilinen risk (dürüstlük notu):** Üretici gerçek veriye bakılarak düzeltildi ve gerçek satırlar test kümesinde de yer alıyor; bu yüzden gerçek satırlardaki metrik **iyimser** olabilir. Kapı karışık test kümesinde uygulanır, yalnız gerçek satırlardaki AUC model kartında ayrıca ve bu uyarıyla raporlanır. Sürüm adı `2.1.0`.

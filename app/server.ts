@@ -3,6 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, ThinkingLevel } from '@google/genai';
+import { registerPredict } from './predict-server';
 import {
   MAX_DEPTH,
   PusulaRequest,
@@ -27,6 +28,9 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 app.use(express.json());
+
+// v2: zorlanma modeli sunucu tüketicisi (onnxruntime-node) — POST /api/predict
+registerPredict(app, __dirname);
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || '',
@@ -62,7 +66,8 @@ function thinkingConfig(level = GEMINI_THINKING) {
 
 // Overload, rate limit and deadline errors are worth retrying on another model; bad requests are not
 const isTransient = (error: unknown) =>
-  /\b(429|500|503|504)\b|UNAVAILABLE|DEADLINE_EXCEEDED|RESOURCE_EXHAUSTED|high demand|timed? ?out|aborted/i.test(
+  // Ağ kopmaları (fetch failed, DNS, bağlantı sıfırlandı) da geçicidir: oyuncu yedek haritayla devam eder
+  /\b(429|500|503|504)\b|UNAVAILABLE|DEADLINE_EXCEEDED|RESOURCE_EXHAUSTED|high demand|timed? ?out|aborted|fetch failed|ECONNRESET|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|network/i.test(
     String((error as Error)?.message ?? error),
   );
 

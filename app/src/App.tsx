@@ -50,6 +50,7 @@ import {
   randomId,
   round1,
 } from './telemetry';
+import { LoadedModel, loadModel, modelAppliesTo } from './model';
 
 const scenario = scenarioData as unknown as ScenarioData;
 
@@ -303,7 +304,17 @@ export default function App() {
     features: Features;
     switches: number;
     lastHover: ChoiceId | null;
+    p: number | null; // modelin bu karar için verdiği zorlanma olasılığı
   } | null>(null);
+  const [model, setModel] = useState<LoadedModel | null>(null);
+  const [prediction, setPrediction] = useState<{ decisionId: string; p: number } | null>(null);
+
+  // Model bir kez yüklenir; yüklenemezse oyun v1 kurallarıyla devam eder (KÖ-14)
+  useEffect(() => {
+    loadModel()
+      .then(setModel)
+      .catch((e) => console.warn('Model yüklenemedi, v1 kuralları geçerli:', e));
+  }, []);
 
   const currentClock = calculateCurrentClock(state);
   const currentDecision = scenario.decisions[state.currentDecisionIndex];
@@ -311,7 +322,18 @@ export default function App() {
 
   // Fading support: each decision gets the support its topic's mastery calls for,
   // not the single level the player picked at the start
-  const support = currentDecision ? decisionSupport(journal, currentDecision, state.level) : null;
+  const ruleSupport = currentDecision ? decisionSupport(journal, currentDecision, state.level) : null;
+  // v2: model zorlanma bekliyorsa desteği artırır (sayaç kalkar, ipucu açılır); asla azaltmaz
+  const modelP = prediction && prediction.decisionId === currentDecision?.id ? prediction.p : null;
+  const threshold = model?.config.decision_threshold ?? 0.5;
+  // shadow / canary dışındaki oyuncuda model yalnızca kaydedilir, oyunu değiştirmez
+  const modelSupport = modelP !== null && modelP >= threshold && modelAppliesTo(playerId());
+  const support = ruleSupport && modelSupport
+    ? { tier: 'new' as LevelId, timerSeconds: null, note: undefined }
+    : ruleSupport;
+  const modelNote = modelSupport
+    ? `Destek açıldı: bu kararda zorlanma olasılığın %${Math.round((modelP as number) * 100)} (eşik %${Math.round(threshold * 100)}). Sayaç kaldırıldı, ipucu açık.`
+    : undefined;
 
   // Kararın başında girdileri dondur: sonradan olan hiçbir şey (bu kararın süresi) girdiye sızmaz
   useEffect(() => {
@@ -324,11 +346,28 @@ export default function App() {
     decisionStartRef.current = {
       decisionId: currentDecision.id,
       startedAt: Date.now(),
-      features: decisionFeatures(state, journal, currentDecision, support?.timerSeconds ?? null, prevDecisionRef.current),
+      // sure_baskisi v1 KURALINA göre ölçülür (modelin kendi kararı girdisine geri beslenmez)
+      features: decisionFeatures(state, journal, currentDecision, ruleSupport?.timerSeconds ?? null, prevDecisionRef.current),
       switches: 0,
       lastHover: null,
+      p: null,
     };
   }, [state.step, state.currentDecisionIndex]);
+
+  // Tahmin: kararın başında dondurulan girdilerle (model sonradan yüklenirse o anda)
+  useEffect(() => {
+    const d = decisionStartRef.current;
+    if (!model || state.step !== 'decision' || !d || d.decisionId !== currentDecision?.id || d.p !== null) return;
+    const id = d.decisionId;
+    model
+      .predict(d.features)
+      .then((p) => {
+        if (decisionStartRef.current?.decisionId !== id) return;
+        decisionStartRef.current.p = p;
+        setPrediction({ decisionId: id, p });
+      })
+      .catch((e) => console.warn('Tahmin başarısız, v1 kuralları geçerli:', e));
+  }, [model, state.step, state.currentDecisionIndex]);
 
   const trackHover = (choice: ChoiceId) => {
     const d = decisionStartRef.current;
@@ -353,8 +392,8 @@ export default function App() {
       sure_doldu: isTimeout ? 1 : 0,
       karar_suresi_sn: seconds,
       gidip_gelme: d.switches,
-      model_p: '',
-      destek_modu: 0,
+      model_p: d.p === null ? '' : Math.round(d.p * 1e6) / 1e6,
+      destek_modu: d.p !== null && d.p >= threshold && modelAppliesTo(playerId()) ? 1 : 0,
       zorlandi: choice === 'B' || isTimeout ? 1 : 0,
     };
     setDataRowCount(appendRow(row).length);
@@ -556,6 +595,8 @@ export default function App() {
               level={support?.tier ?? state.level}
               timerSeconds={support?.timerSeconds ?? null}
               supportNote={support?.note}
+              modelNote={modelNote}
+              modelP={modelP}
               revealedHint={Boolean(state.revealedHints[currentDecision.id])}
               onToggleHint={() =>
                 dispatch({ type: 'TOGGLE_HINT', decisionId: currentDecision.id })

@@ -1,0 +1,9 @@
+# SE Primer v2 — Python bağımlılıkları (eğitim, ONNX, parite testi, HF yayını)
+# Kurulumdan sonra tam sürümler `pip freeze` ile buraya sabitlenir (tekrarlanabilirlik).
+numpy
+pandas
+scikit-learn
+skl2onnx
+onnx
+onnxruntime
+huggingface_hub

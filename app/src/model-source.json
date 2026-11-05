@@ -1,0 +1,6 @@
+{
+  "repo": "",
+  "commit": "",
+  "version": "",
+  "rollout": { "mode": "full", "percent": 100 }
+}

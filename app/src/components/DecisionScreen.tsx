@@ -14,6 +14,8 @@ interface DecisionScreenProps {
   onOpenTutor: () => void;
   onTimeUpdate?: (secondsLeft: number) => void;
   onHoverChoice?: (choice: ChoiceId) => void; // A↔B tereddüdünü ölçmek için (veri toplama)
+  modelNote?: string; // model desteği açtıysa nedeni
+  modelP?: number | null; // zorlanma olasılığı (null = model yok / henüz hesaplanmadı)
 }
 
 export const DecisionScreen: React.FC<DecisionScreenProps> = ({
@@ -28,6 +30,8 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
   onOpenTutor,
   onTimeUpdate,
   onHoverChoice,
+  modelNote,
+  modelP = null,
 }) => {
   const isSenior = timerSeconds !== null;
   const isMid = level === 'mid';
@@ -122,6 +126,15 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
           <span className="text-[#E58A7B]">DB Pool: %98 Doygun</span>
         </div>
       </div>
+
+      {modelNote && (
+        <p
+          data-testid="model-support-note"
+          className="mb-4 px-3 py-2 rounded-xl bg-[#5FB3A8]/10 border border-[#5FB3A8]/30 text-[12px] text-[#5FB3A8] leading-relaxed"
+        >
+          {modelNote}
+        </p>
+      )}
 
       {supportNote && (
         <p
@@ -219,6 +232,9 @@ export const DecisionScreen: React.FC<DecisionScreenProps> = ({
           <ShieldCheck className="w-4 h-4 text-[#5FB3A8]" />
           <span className="font-mono text-[11px]">Nöbet modu aktif</span>
         </div>
+        <span className="font-mono text-[10px] text-[#9FB0C3]" title="Modelin bu karar için zorlanma olasılığı">
+          p=<span data-cy="p">{modelP === null ? '—' : modelP.toFixed(6)}</span>
+        </span>
 
         {/* Floating AI Tutor Button */}
         <button
