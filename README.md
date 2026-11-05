@@ -7,7 +7,7 @@
 | GitHub repo | [github.com/mervetask990-art/yzm301-se-primer](https://github.com/mervetask990-art/yzm301-se-primer) · geçen haftanın teslimi: [`v1.0` etiketi](https://github.com/mervetask990-art/yzm301-se-primer/tree/v1.0) |
 | Hugging Face model (commit'e sabit) | [taskinmerve/se-primer-zorlanma@03d54fe](https://huggingface.co/taskinmerve/se-primer-zorlanma/tree/03d54fe50427aa06dea6073544c6dc725cf6f557) · `model.onnx`: [`resolve/03d54fe…/model.onnx`](https://huggingface.co/taskinmerve/se-primer-zorlanma/resolve/03d54fe50427aa06dea6073544c6dc725cf6f557/model.onnx) |
 | Canlı uygulama (Render) | **[se-primer.onrender.com](https://se-primer.onrender.com)** · ücretsiz katman uykudan uyanırken ilk açılış 30–50 sn sürebilir · diferansiyel test paneli: [`?parite=1`](https://se-primer.onrender.com/?parite=1) |
-| Demo video (63 sn) | [demo/se-primer-v2-demo.mp4](demo/se-primer-v2-demo.mp4) · YouTube: _eklenecek_ · aynı sahnede (K2) iki oyuncu, iki farklı model kararı; oyuncu hareketleri Cypress ile otomatik ([cypress/demo/demo.cy.ts](cypress/demo/demo.cy.ts)) |
+| Demo video (63 sn) | [demo/se-primer-v2-demo.mp4](demo/se-primer-v2-demo.mp4) · YouTube: [youtu.be/IAU_NeP9jiw](https://youtu.be/IAU_NeP9jiw) · aynı sahnede (K2) iki oyuncu, iki farklı model kararı; oyuncu hareketleri Cypress ile otomatik ([cypress/demo/demo.cy.ts](cypress/demo/demo.cy.ts)) |
 
 ## Kurulum (3 komut)
 
